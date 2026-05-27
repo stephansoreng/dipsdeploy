@@ -1,0 +1,28 @@
+All config ligger i github. Repoet er delt inn i branches for hvert cluster EPJ drifter, pluss en branch vi holder synkronisert med leverandøren (DIPS) sin kildekode uten noen endringer:
+
+dips (kildekode fra DIPS uten endringer)
+epj-utv-ds2 (main-trunk)
+epj-test
+epj-qa-ds2
+epj-prod
+Altså vil f.eks. endringer i epj-utv-ds2 branchen ikke påvirke noen av de andre clusterne, kun epj-utv-ds2 (selv om filendringene kun gjelder noe som ligger i et annet cluster, feks installere noe i a-test)
+
+Det er flere miljøer som er syncet mot epj-test-branchen:
+DIPS Test
+DIPS Test SYN2
+DIPS Kurve Test
+DIPS FRESK
+DIPS Kurs
+DIPS Test SYN
+DIPS Test LsUA
+
+Vi følger p.d.d. en lineær endringsflyt som tar alle ønskede endringer gjennom alle cluster i rekkefølgen ovenfor (altså epj-utv først). 
+Slik får vi testet alle endringer som er planlagt produksjonssatt i samtlige miljø før det når produksjon. 
+Endringer blir lagd i egne feature/hotfix-branches og merges inn i driftsbranchene en etter en.
+
+Primært sett følger ArgoCD med på filer i følgende mapper, og vil utføre endringer i Kubernetes-clusterne automatisk når de endres i repoet:
+applicationsets-staged: Forteller applicationsets-ene til ArgoCD hvilket git repo de skal bruke & hvor å hente Helm charts
+environments: Inneholder yaml filer som definerer hvilke tjenester som skal være installert i hvilke DIPS-miljø samt krypterte hemmeligheter for hver. Tilsvarende er det ei ymal-fil for hvert cluster.
+products: Inneholder en mappe for hver tjeneste DIPS leverer på Kubernetes ("SMUD"-plattformen). Hver mappe har ei undermappe for hvert "stage" DIPS leverer de på. EPJ bruker primært kun "production".
+
+Det hadde vært interessant å skissere ut/visualisere et diagram på nåsituasjonen for deploy hos oss.

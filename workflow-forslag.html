@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIPS Deploy – Foreslått arbeidsflyt</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@600;700;800&display=swap');
+
+:root {
+  --bg:        #f8fafc;
+  --surface:   #ffffff;
+  --surface2:  #f1f5f9;
+  --border:    #e2e8f0;
+  --border2:   #cbd5e1;
+
+  --fast-c:    #0ea5e9; --fast-bg: #e0f2fe; --fast-bd: #38bdf8;
+  --test-c:    #8b5cf6; --test-bg: #ede9fe; --test-bd: #a78bfa;
+  --spec-c:    #ec4899; --spec-bg: #fce7f3; --spec-bd: #f472b6;
+  --qa-c:      #f59e0b; --qa-bg:   #fef3c7; --qa-bd:   #fbbf24;
+  --prod-c:    #16a34a; --prod-bg: #dcfce7; --prod-bd: #4ade80;
+  --now-c:     #dc2626; --now-bg:  #fee2e2; --now-bd:  #f87171;
+
+  --text:      #0f172a;
+  --dim:       #64748b;
+  --faint:     #94a3b8;
+
+  --mono: 'JetBrains Mono', monospace;
+  --head: 'Syne', sans-serif;
+  --r: 10px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  padding: 40px 36px 64px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ── Header ─────────────────────────────────────── */
+header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  border-bottom: 2px solid var(--border); padding-bottom: 20px; margin-bottom: 36px;
+  flex-wrap: wrap; gap: 16px;
+}
+h1 { font-family: var(--head); font-size: 22px; font-weight: 800; letter-spacing: -.4px; }
+h1 em { color: var(--fast-c); font-style: normal; }
+.sub { font-size: 10px; color: var(--dim); letter-spacing: .12em; text-transform: uppercase; margin-top: 5px; }
+.badge {
+  font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  background: var(--now-bg); color: var(--now-c); border: 1px solid var(--now-bd);
+  border-radius: 20px; padding: 4px 12px; align-self: flex-start; font-weight: 700;
+}
+
+/* ── Two-column layout ───────────────────────────── */
+.layout { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+.col-main { flex: 3; min-width: 560px; }
+.col-side  { flex: 1; min-width: 240px; }
+
+/* ── Section heading ─────────────────────────────── */
+.section-title {
+  font-family: var(--head); font-size: 13px; font-weight: 700;
+  letter-spacing: -.2px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── Problem box (current state) ─────────────────── */
+.problem-box {
+  background: var(--now-bg); border: 1px solid var(--now-bd);
+  border-radius: var(--r); padding: 16px 18px; margin-bottom: 28px;
+}
+.problem-box h3 { font-size: 11px; color: var(--now-c); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; }
+.problem-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.problem-list li { display: flex; gap: 8px; font-size: 12px; color: #7f1d1d; }
+.problem-list li::before { content: '✗'; color: var(--now-c); flex-shrink: 0; font-weight: 700; }
+
+/* ── Tier pipeline ───────────────────────────────── */
+.pipeline-wrap {
+  border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--surface); overflow: hidden; margin-bottom: 28px;
+}
+.pipeline-header {
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  padding: 10px 16px; font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--dim); font-weight: 600;
+}
+
+/* Tier columns */
+.tier-row {
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid var(--border);
+}
+.tier-row:last-child { border-bottom: none; }
+
+.tier-label {
+  width: 110px; flex-shrink: 0;
+  padding: 14px 14px;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; justify-content: center;
+  background: var(--surface2);
+}
+.tier-name { font-size: 11px; font-weight: 700; }
+.tier-desc { font-size: 9px; color: var(--dim); margin-top: 2px; letter-spacing: .04em; }
+
+.tier-envs {
+  display: flex; align-items: stretch; flex: 1; gap: 0;
+}
+
+.env-cell {
+  flex: 1; padding: 12px 14px; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.env-cell:last-child { border-right: none; }
+.env-name { font-size: 11px; font-weight: 700; }
+.env-note { font-size: 9px; color: var(--dim); letter-spacing: .03em; }
+
+.env-tag {
+  display: inline-block; font-size: 8px; letter-spacing: .1em;
+  text-transform: uppercase; border-radius: 3px;
+  padding: 1px 6px; margin-top: 3px; font-weight: 700;
+  align-self: flex-start;
+}
+
+/* Tier color themes */
+.tier-fast .tier-label { border-left: 4px solid var(--fast-c); }
+.tier-fast .tier-name  { color: var(--fast-c); }
+.tier-fast .env-tag    { background: var(--fast-bg); color: var(--fast-c); border: 1px solid var(--fast-bd); }
+
+.tier-test .tier-label { border-left: 4px solid var(--test-c); }
+.tier-test .tier-name  { color: var(--test-c); }
+.tier-test .env-tag    { background: var(--test-bg); color: var(--test-c); border: 1px solid var(--test-bd); }
+
+.tier-spec .tier-label { border-left: 4px solid var(--spec-c); }
+.tier-spec .tier-name  { color: var(--spec-c); }
+.tier-spec .env-tag    { background: var(--spec-bg); color: var(--spec-c); border: 1px solid var(--spec-bd); }
+
+.tier-qa .tier-label   { border-left: 4px solid var(--qa-c); }
+.tier-qa .tier-name    { color: var(--qa-c); }
+.tier-qa .env-tag      { background: var(--qa-bg); color: var(--qa-c); border: 1px solid var(--qa-bd); }
+
+.tier-prod .tier-label { border-left: 4px solid var(--prod-c); }
+.tier-prod .tier-name  { color: var(--prod-c); }
+.tier-prod .env-tag    { background: var(--prod-bg); color: var(--prod-c); border: 1px solid var(--prod-bd); }
+
+/* ── Promotion flow diagram ───────────────────────── */
+.promo-flow {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: 28px; overflow-x: auto; padding-bottom: 4px;
+}
+.promo-node {
+  border-radius: var(--r); border: 1px solid;
+  padding: 10px 14px; flex-shrink: 0;
+  min-width: 120px; text-align: center;
+}
+.promo-node-name { font-size: 12px; font-weight: 700; }
+.promo-node-sub  { font-size: 9px; margin-top: 2px; }
+.promo-arrow {
+  flex-shrink: 0; display: flex; flex-direction: column;
+  align-items: center; padding: 0 4px;
+}
+.promo-arrow svg { display: block; }
+.promo-arrow-lbl { font-size: 8px; color: var(--dim); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+
+/* Branch arrow (Kurve Test) */
+.promo-branch {
+  display: flex; flex-direction: column; align-items: center;
+  position: relative; margin: 0 4px;
+}
+
+/* ── App promotion matrix ─────────────────────────── */
+.matrix-wrap {
+  border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--surface); overflow: hidden; margin-bottom: 28px;
+}
+.matrix-header {
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  padding: 10px 16px; font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--dim); font-weight: 600;
+}
+.matrix-sub {
+  font-size: 11px; color: var(--dim); padding: 8px 16px;
+  border-bottom: 1px solid var(--border); font-family: var(--mono);
+}
+.matrix-table {
+  width: 100%; border-collapse: collapse;
+}
+.matrix-table th {
+  padding: 8px 12px; font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; text-align: center; color: var(--dim);
+  border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
+  white-space: nowrap;
+}
+.matrix-table th:first-child { text-align: left; width: 160px; }
+.matrix-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border); text-align: center;
+  font-size: 11px;
+}
+.matrix-table td:first-child { text-align: left; font-weight: 600; font-size: 11px; background: var(--surface2); }
+.matrix-table tr:last-child td { border-bottom: none; }
+.matrix-table td:last-child, .matrix-table th:last-child { border-right: none; }
+
+.ver-badge {
+  display: inline-block; border-radius: 4px; padding: 2px 8px;
+  font-size: 10px; font-weight: 700; border: 1px solid;
+}
+
+/* ── Key principles ──────────────────────────────── */
+.principles { display: flex; flex-direction: column; gap: 10px; }
+.principle {
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 12px 14px; background: var(--surface);
+  border-left: 3px solid;
+}
+.principle-title { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+.principle-body  { font-size: 11px; color: var(--dim); line-height: 1.5; }
+
+/* ── Side panel cards ────────────────────────────── */
+.side-card {
+  border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--surface); padding: 14px 16px; margin-bottom: 14px;
+}
+.side-card h4 {
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--dim); margin-bottom: 10px;
+}
+.side-list { display: flex; flex-direction: column; gap: 6px; }
+.side-list li { display: flex; gap: 8px; font-size: 11px; list-style: none; align-items: flex-start; }
+.side-list li::before { flex-shrink: 0; font-weight: 700; }
+.side-list.pros li::before { content: '✓'; color: var(--prod-c); }
+.side-list.cons li::before { content: '→'; color: var(--fast-c); }
+
+.side-note {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px 14px; margin-bottom: 14px;
+  font-size: 11px; color: var(--dim); line-height: 1.6;
+}
+.side-note strong { color: var(--text); }
+
+/* ── Fade in ─────────────────────────────────────── */
+@keyframes fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fi{animation:fade-up .4s ease both;}
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}
+.d4{animation-delay:.2s}.d5{animation-delay:.25s}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>DIPS <em>Deploy</em> – Foreslått arbeidsflyt</h1>
+    <p class="sub">Per-applikasjon staged deploy · Tiered environments · ArgoCD ApplicationSets</p>
+  </div>
+  <div class="badge">Forslag</div>
+</header>
+
+<div class="layout">
+<div class="col-main">
+
+  <!-- ══ PROBLEM ══════════════════════════════════════ -->
+  <div class="problem-box fi d1">
+    <h3>Utfordringer med dagens modell</h3>
+    <ul class="problem-list">
+      <li>Alle endringer serialiseres gjennom alle miljøer – én endring i ett cluster blokkerer alle andre</li>
+      <li>Branch-per-cluster betyr at én PR per cluster for enhver endring, uansett omfang</li>
+      <li>Alle 7 test-miljøer får alltid alle endringer, også endringer irrelevante for dem</li>
+      <li>Ingen mulighet for ulike release-hastigheter – alt går i samme takt</li>
+    </ul>
+  </div>
+
+  <!-- ══ TIER MODEL ════════════════════════════════════ -->
+  <div class="section-title fi d2">Foreslått miljøstruktur – tre nivåer</div>
+
+  <div class="pipeline-wrap fi d2">
+    <div class="pipeline-header">Miljønivåer · fra raskest til mest stabilt</div>
+
+    <!-- Tier 1: Fast -->
+    <div class="tier-row tier-fast">
+      <div class="tier-label">
+        <div class="tier-name">Nivå 1</div>
+        <div class="tier-desc">Rask · ustabil</div>
+      </div>
+      <div class="tier-envs">
+        <div class="env-cell">
+          <div class="env-name">DIPS Test SYN2</div>
+          <div class="env-note">Automatisk promote ved merge til main.<br>Høy endringstakt, lav stabilitetskrav.</div>
+          <span class="env-tag">auto · kontinuerlig</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tier 2: Test -->
+    <div class="tier-row tier-test">
+      <div class="tier-label">
+        <div class="tier-name">Nivå 2</div>
+        <div class="tier-desc">Test · semi-stabilt</div>
+      </div>
+      <div class="tier-envs">
+        <div class="env-cell">
+          <div class="env-name">DIPS Test</div>
+          <div class="env-note">Integrasjonstesting.<br>Promote etter godkjent smoke-test i Nivå 1.</div>
+          <span class="env-tag">semi-auto · daglig</span>
+        </div>
+        <div class="env-cell">
+          <div class="env-name">DIPS Test SYN</div>
+          <div class="env-note">Synkroniseringstesting.<br>Samme promote-rytme som DIPS Test.</div>
+          <span class="env-tag">semi-auto · daglig</span>
+        </div>
+        <div class="env-cell">
+          <div class="env-name">DIPS FRESK</div>
+          <div class="env-note">FRESK-spesifikk testing.<br>Kan fremskyndes ved behov.</div>
+          <span class="env-tag">semi-auto</span>
+        </div>
+        <div class="env-cell">
+          <div class="env-name">DIPS Kurs</div>
+          <div class="env-note">Kursmiljø. Stabil – promote kun planlagt.</div>
+          <span class="env-tag">manuell</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tier 2b: Specialised -->
+    <div class="tier-row tier-spec">
+      <div class="tier-label">
+        <div class="tier-name">Nivå 2b</div>
+        <div class="tier-desc">Spesialisert</div>
+      </div>
+      <div class="tier-envs">
+        <div class="env-cell">
+          <div class="env-name">DIPS Kurve Test</div>
+          <div class="env-note">Dedikert kurvemodul-testing.<br>Uavhengig promote-syklus – kun relevante app-er.</div>
+          <span class="env-tag">manuell · behovsstyrt</span>
+        </div>
+        <div class="env-cell">
+          <div class="env-name">DIPS Test LsUA</div>
+          <div class="env-note">LsUA-spesifikk testing.<br>Egen syklus, uavhengig av resten.</div>
+          <span class="env-tag">manuell · behovsstyrt</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tier 3: QA -->
+    <div class="tier-row tier-qa">
+      <div class="tier-label">
+        <div class="tier-name">Nivå 3</div>
+        <div class="tier-desc">QA · stabilt</div>
+      </div>
+      <div class="tier-envs">
+        <div class="env-cell">
+          <div class="env-name">epj-qa-ds2</div>
+          <div class="env-note">Godkjenningsstest før produksjon.<br>Manuell promote-beslutning fra Nivå 2.</div>
+          <span class="env-tag">manuell godkjenning</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tier 4: Prod -->
+    <div class="tier-row tier-prod">
+      <div class="tier-label">
+        <div class="tier-name">Nivå 4</div>
+        <div class="tier-desc">Produksjon</div>
+      </div>
+      <div class="tier-envs">
+        <div class="env-cell">
+          <div class="env-name">epj-prod</div>
+          <div class="env-note">Produksjonsmiljø.<br>Manuell godkjenning + planlagt utrullingsvindu.</div>
+          <span class="env-tag">manuell · godkjenning</span>
+        </div>
+      </div>
+    </div>
+  </div><!-- /tier table -->
+
+  <!-- ══ PROMOTION FLOW ════════════════════════════════ -->
+  <div class="section-title fi d3">Promote-flyt per applikasjon</div>
+
+  <div class="promo-flow fi d3">
+
+    <div class="promo-node" style="background:var(--surface2);border-color:var(--border2);">
+      <div class="promo-node-name" style="color:var(--dim);">main branch</div>
+      <div class="promo-node-sub" style="color:var(--faint);">én branch · alle apps</div>
+    </div>
+
+    <div class="promo-arrow">
+      <svg width="40" height="20" viewBox="0 0 40 20">
+        <line x1="2" y1="10" x2="32" y2="10" stroke="var(--fast-c)" stroke-width="2"/>
+        <polyline points="26,4 32,10 26,16" fill="none" stroke="var(--fast-c)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="promo-arrow-lbl" style="color:var(--fast-c);">auto</div>
+    </div>
+
+    <div class="promo-node" style="background:var(--fast-bg);border-color:var(--fast-bd);">
+      <div class="promo-node-name" style="color:var(--fast-c);">Test SYN2</div>
+      <div class="promo-node-sub" style="color:var(--fast-c);opacity:.7;">Nivå 1</div>
+    </div>
+
+    <div class="promo-arrow">
+      <svg width="40" height="20" viewBox="0 0 40 20">
+        <line x1="2" y1="10" x2="32" y2="10" stroke="var(--test-c)" stroke-width="2"/>
+        <polyline points="26,4 32,10 26,16" fill="none" stroke="var(--test-c)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="promo-arrow-lbl" style="color:var(--test-c);">smoke-test ok</div>
+    </div>
+
+    <div class="promo-node" style="background:var(--test-bg);border-color:var(--test-bd);">
+      <div class="promo-node-name" style="color:var(--test-c);">Test-miljøer</div>
+      <div class="promo-node-sub" style="color:var(--test-c);opacity:.7;">Nivå 2</div>
+    </div>
+
+    <div class="promo-arrow">
+      <svg width="40" height="20" viewBox="0 0 40 20">
+        <line x1="2" y1="10" x2="32" y2="10" stroke="var(--qa-c)" stroke-width="2"/>
+        <polyline points="26,4 32,10 26,16" fill="none" stroke="var(--qa-c)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="promo-arrow-lbl" style="color:var(--qa-c);">manuell</div>
+    </div>
+
+    <div class="promo-node" style="background:var(--qa-bg);border-color:var(--qa-bd);">
+      <div class="promo-node-name" style="color:var(--qa-c);">QA</div>
+      <div class="promo-node-sub" style="color:var(--qa-c);opacity:.7;">Nivå 3</div>
+    </div>
+
+    <div class="promo-arrow">
+      <svg width="40" height="20" viewBox="0 0 40 20">
+        <line x1="2" y1="10" x2="32" y2="10" stroke="var(--prod-c)" stroke-width="2"/>
+        <polyline points="26,4 32,10 26,16" fill="none" stroke="var(--prod-c)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="promo-arrow-lbl" style="color:var(--prod-c);">godkjenning</div>
+    </div>
+
+    <div class="promo-node" style="background:var(--prod-bg);border-color:var(--prod-bd);">
+      <div class="promo-node-name" style="color:var(--prod-c);">Prod</div>
+      <div class="promo-node-sub" style="color:var(--prod-c);opacity:.7;">Nivå 4</div>
+    </div>
+
+  </div><!-- /promo-flow -->
+
+  <!-- ══ APP MATRIX ════════════════════════════════════ -->
+  <div class="section-title fi d4">Nøkkeldifferanse: applikasjoner promoteres uavhengig</div>
+
+  <div class="matrix-wrap fi d4">
+    <div class="matrix-header">Eksempel – tre applikasjoner på ulike stadier samtidig</div>
+    <div class="matrix-sub">Hver app har sin egen versjon per miljø. Én applikasjons forsinkelse blokkerer ikke de andre.</div>
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>Applikasjon</th>
+          <th style="color:var(--fast-c)">Test SYN2</th>
+          <th style="color:var(--test-c)">Test-miljøer</th>
+          <th style="color:var(--spec-c)">Kurve Test</th>
+          <th style="color:var(--qa-c)">QA</th>
+          <th style="color:var(--prod-c)">Prod</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>EPJ Core</td>
+          <td><span class="ver-badge" style="background:var(--fast-bg);border-color:var(--fast-bd);color:var(--fast-c)">v2.4.1</span></td>
+          <td><span class="ver-badge" style="background:var(--test-bg);border-color:var(--test-bd);color:var(--test-c)">v2.3.8</span></td>
+          <td><span class="ver-badge" style="background:var(--spec-bg);border-color:var(--spec-bd);color:var(--spec-c)">v2.3.8</span></td>
+          <td><span class="ver-badge" style="background:var(--qa-bg);border-color:var(--qa-bd);color:var(--qa-c)">v2.3.5</span></td>
+          <td><span class="ver-badge" style="background:var(--prod-bg);border-color:var(--prod-bd);color:var(--prod-c)">v2.3.2</span></td>
+        </tr>
+        <tr>
+          <td>DIPS Kurve</td>
+          <td><span class="ver-badge" style="background:var(--fast-bg);border-color:var(--fast-bd);color:var(--fast-c)">v1.9.0</span></td>
+          <td><span class="ver-badge" style="background:var(--test-bg);border-color:var(--test-bd);color:var(--test-c)">v1.8.4</span></td>
+          <td><span class="ver-badge" style="background:var(--spec-bg);border-color:var(--spec-bd);color:var(--spec-c)">v1.9.0</span></td>
+          <td><span class="ver-badge" style="background:var(--qa-bg);border-color:var(--qa-bd);color:var(--qa-c)">v1.8.2</span></td>
+          <td><span class="ver-badge" style="background:var(--prod-bg);border-color:var(--prod-bd);color:var(--prod-c)">v1.7.9</span></td>
+        </tr>
+        <tr>
+          <td>FRESK Integrasjon</td>
+          <td><span class="ver-badge" style="background:var(--fast-bg);border-color:var(--fast-bd);color:var(--fast-c)">v3.1.2</span></td>
+          <td><span class="ver-badge" style="background:var(--test-bg);border-color:var(--test-bd);color:var(--test-c)">v3.1.2</span></td>
+          <td style="color:var(--faint);font-size:10px;">–</td>
+          <td><span class="ver-badge" style="background:var(--qa-bg);border-color:var(--qa-bd);color:var(--qa-c)">v3.1.0</span></td>
+          <td><span class="ver-badge" style="background:var(--prod-bg);border-color:var(--prod-bd);color:var(--prod-c)">v3.0.8</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══ PRINCIPLES ════════════════════════════════════ -->
+  <div class="section-title fi d5">Nøkkelprinsipper</div>
+
+  <div class="principles fi d5">
+    <div class="principle" style="border-left-color:var(--fast-c)">
+      <div class="principle-title">Én main branch – ikke branch per cluster</div>
+      <div class="principle-body">ArgoCD ApplicationSets leser én branch og deployer til alle miljøer via miljøspesifikke Helm values-filer. Promote er en eksplisitt handling (oppdater image-tag / chart-versjon), ikke en branch-merge.</div>
+    </div>
+    <div class="principle" style="border-left-color:var(--test-c)">
+      <div class="principle-title">Spesialiserte miljøer får kun relevante applikasjoner</div>
+      <div class="principle-body">Kurve Test trenger bare Kurve-relaterte tjenester. FRESK trenger bare FRESK. ApplicationSets-matrisen styrer hvilke apps som deployes til hvilke miljøer – ikke alle til alle.</div>
+    </div>
+    <div class="principle" style="border-left-color:var(--qa-c)">
+      <div class="principle-title">Promote-hastighet matches til miljøets formål</div>
+      <div class="principle-body">Test SYN2 kan rulle ut 10 ganger om dagen. DIPS Kurs trenger kanskje bare monthly release. QA og Prod krever eksplisitt menneskelig godkjenning. Disse syklene er uavhengige.</div>
+    </div>
+    <div class="principle" style="border-left-color:var(--prod-c)">
+      <div class="principle-title">Én applikasjons forsinkelse blokkerer ikke andre</div>
+      <div class="principle-body">Hvis EPJ Core har en bug i QA, kan DIPS Kurve fortsatt promoteres til Prod uavhengig. Dagens modell ville blokkert alt fordi branchene er koblet.</div>
+    </div>
+  </div>
+
+</div><!-- /col-main -->
+
+<!-- ══ SIDE PANEL ══════════════════════════════════════ -->
+<div class="col-side">
+
+  <div class="side-card fi d1">
+    <h4>Gevinster</h4>
+    <ul class="side-list pros">
+      <li>Applikasjoner promoteres uavhengig – én feil stopper ikke alt</li>
+      <li>Reduserer antall PR-er dramatisk (image-tag-bump vs branch-merge per env)</li>
+      <li>Spesialiserte miljøer får kun det de trenger</li>
+      <li>Automatisk promote til Nivå 1 gir raskere feedback</li>
+      <li>Tydelig eierskap: teamet bestemmer når de promoterer sin app</li>
+    </ul>
+  </div>
+
+  <div class="side-card fi d2">
+    <h4>Hva kreves å innføre</h4>
+    <ul class="side-list cons">
+      <li>Migrasjon fra branch-per-cluster til en-branch-modell</li>
+      <li>Helm values-filer per miljø (erstatter branch-differanser)</li>
+      <li>ArgoCD ApplicationSet-konfigurasjon med miljømatrise</li>
+      <li>CI/CD-pipeline for automatisk image-tag-bump til Nivå 1</li>
+      <li>Promote-verktøy (script/workflow) for Nivå 2–4</li>
+    </ul>
+  </div>
+
+  <div class="side-note fi d3">
+    <strong>Om DIPS Kurve Test og Test SYN2</strong><br><br>
+    Disse egner seg godt som <em>dedikerte tracks</em> med egne promote-sykluser, fremfor å inngå i den lineære fellesflyten. De kan motta endringer fra Nivå 1 uten å blokkere veien mot QA/Prod for andre apps.
+  </div>
+
+  <div class="side-note fi d4">
+    <strong>Best practice-referanser</strong><br><br>
+    Denne modellen følger GitOps-mønsteret beskrevet i <em>ArgoCD ApplicationSets documentation</em> og er i tråd med hvordan store DIPS-installasjoner og healthcare IT-plattformer typisk strukturerer multi-cluster rollout med ulike stabilitetskrav.
+  </div>
+
+</div><!-- /col-side -->
+</div><!-- /layout -->
+
+</body>
+</html>

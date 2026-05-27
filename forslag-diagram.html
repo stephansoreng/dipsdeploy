@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIPS Deploy Pipeline – Foreslått modell</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #21303f;
+  --text:    #e2e8f0;
+  --dim:     #64748b;
+
+  --main-c:  #60a5fa; --main-bg: #0c1a2e; --main-bd: #1d4ed8;
+  --argo-c:  #fb923c; --argo-bg: #1c0e00; --argo-bd: #c2410c;
+  --fast-c:  #22d3ee; --fast-bg: #041f2a; --fast-bd: #0e7490;
+  --test-c:  #a78bfa; --test-bg: #12082a; --test-bd: #5b21b6;
+  --spec-c:  #f472b6; --spec-bg: #1f0816; --spec-bd: #9d174d;
+  --qa-c:    #fbbf24; --qa-bg:   #1c1300; --qa-bd:   #92400e;
+  --prod-c:  #4ade80; --prod-bg: #042010; --prod-bd: #15803d;
+  --dips-c:  #94a3b8; --dips-bg: #161f2e; --dips-bd: #334155;
+  --feat-c:  #e879f9; --feat-bg: #1a0525; --feat-bd: #7e22ce;
+
+  --mono: 'JetBrains Mono', monospace;
+  --head: 'Syne', sans-serif;
+  --r: 8px;
+  --cw: 900px;   /* canvas width */
+  --t2w: 540px;  /* Tier 2 width */
+  --t2bw: 340px; /* Tier 2b width */
+  --sg: 20px;    /* split gap */
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  padding: 36px 32px 56px;
+  min-height: 100vh;
+}
+
+header {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 18px; margin-bottom: 36px;
+  flex-wrap: wrap; gap: 16px;
+}
+h1 { font-family: var(--head); font-size: 24px; font-weight: 800; letter-spacing: -.5px; }
+h1 em { color: var(--main-c); font-style: normal; }
+.sub { font-size: 10px; color: var(--dim); letter-spacing: .12em; text-transform: uppercase; margin-top: 5px; }
+.badge { font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  background: rgba(251,146,60,.15); color: var(--argo-c);
+  border: 1px solid var(--argo-bd); border-radius: 20px; padding: 4px 14px; font-weight: 700; }
+.legend { display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+.leg { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--dim); letter-spacing:.05em; text-transform:uppercase; }
+.leg-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+
+.canvas { overflow-x: auto; padding-bottom: 16px; }
+.canvas-inner { width: var(--cw); display: flex; flex-direction: column; align-items: center; }
+
+/* ── Base card ─────────────────────────────────── */
+.card {
+  border-radius: var(--r); border: 1px solid;
+  padding: 12px 16px; position: relative; overflow: hidden; width: 100%;
+}
+.card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  border-radius: var(--r) var(--r) 0 0;
+}
+.clbl { font-size:8px; letter-spacing:.18em; text-transform:uppercase; margin-bottom:5px;
+  display:flex; align-items:center; gap:5px; }
+.cname { font-size:13px; font-weight:700; }
+.csub  { font-size:10px; margin-top:4px; color:var(--dim); }
+
+.c-main { background:var(--main-bg); border-color:var(--main-bd); }
+.c-main::before { background:var(--main-c); }
+.c-main .clbl,.c-main .cname { color:var(--main-c); }
+
+.c-argo { background:var(--argo-bg); border-color:var(--argo-bd); }
+.c-argo::before { background:var(--argo-c); }
+.c-argo .clbl,.c-argo .cname { color:var(--argo-c); }
+
+.c-dips { background:var(--dips-bg); border-color:var(--dips-bd); border-style:dashed; }
+.c-dips::before { background:var(--dips-c); }
+.c-dips .clbl,.c-dips .cname { color:var(--dips-c); }
+.c-dips .csub { color:var(--dim); }
+
+.c-feat { background:var(--feat-bg); border-color:var(--feat-bd); }
+.c-feat::before { background:var(--feat-c); }
+.c-feat .clbl,.c-feat .cname { color:var(--feat-c); }
+
+/* ── Vertical connector ─────────────────────────── */
+.vc {
+  height:40px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; position:relative;
+}
+.vc::before {
+  content:''; position:absolute; top:0; bottom:0;
+  left:50%; transform:translateX(-50%); width:2px;
+}
+.vc-lbl {
+  font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+  z-index:1; background:var(--bg); padding:0 8px; border-radius:10px; white-space:nowrap;
+}
+.vc-feat::before  { background:var(--feat-c); }  .vc-feat .vc-lbl  { color:var(--feat-c); }
+.vc-main::before  { background:var(--main-c); }  .vc-main .vc-lbl  { color:var(--main-c); }
+.vc-argo::before  { background:var(--argo-c); }  .vc-argo .vc-lbl  { color:var(--argo-c); }
+.vc-fast::before  { background:var(--fast-c); }  .vc-fast .vc-lbl  { color:var(--fast-c); }
+.vc-test::before  { background:var(--test-c); }  .vc-test .vc-lbl  { color:var(--test-c); }
+.vc-spec::before  { background:var(--spec-c); }  .vc-spec .vc-lbl  { color:var(--spec-c); }
+.vc-qa::before    { background:var(--qa-c);   }  .vc-qa .vc-lbl    { color:var(--qa-c);   }
+.vc-prod::before  { background:var(--prod-c); }  .vc-prod .vc-lbl  { color:var(--prod-c); }
+.vc-dips::before  { background:var(--dips-c); }  .vc-dips .vc-lbl  { color:var(--dips-c); }
+
+/* ── Tier block ─────────────────────────────────── */
+.tier {
+  border-radius:var(--r); border:1px solid; overflow:hidden; width:100%;
+}
+.tier-hd {
+  padding:9px 16px; font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+  font-weight:700; display:flex; align-items:center; gap:12px;
+  border-bottom:1px solid;
+}
+.tier-hd-name { font-size:12px; font-weight:700; }
+.tier-hd-desc { font-size:9px; opacity:.7; }
+.tier-badge {
+  margin-left:auto; font-size:8px; border-radius:10px; padding:2px 9px;
+  font-weight:700; letter-spacing:.1em; text-transform:uppercase; border:1px solid;
+}
+.tier-bd { padding:10px 12px; display:flex; gap:8px; flex-wrap:wrap; }
+.tier-note {
+  padding:6px 12px 8px; font-size:9px; color:var(--dim); letter-spacing:.04em;
+  border-top:1px solid;
+}
+
+.t-fast { border-color:var(--fast-bd); }
+.t-fast .tier-hd { background:rgba(34,211,238,.07); color:var(--fast-c); border-bottom-color:var(--fast-bd); }
+.t-fast .tier-bd { background:rgba(34,211,238,.02); }
+.t-fast .tier-badge { background:rgba(34,211,238,.12); color:var(--fast-c); border-color:var(--fast-bd); }
+
+.t-test { border-color:var(--test-bd); }
+.t-test .tier-hd { background:rgba(167,139,250,.07); color:var(--test-c); border-bottom-color:var(--test-bd); }
+.t-test .tier-bd { background:rgba(167,139,250,.02); }
+.t-test .tier-badge { background:rgba(167,139,250,.12); color:var(--test-c); border-color:var(--test-bd); }
+.t-test .tier-note { border-top-color:var(--test-bd); }
+
+.t-spec { border-color:var(--spec-bd); }
+.t-spec .tier-hd { background:rgba(244,114,182,.07); color:var(--spec-c); border-bottom-color:var(--spec-bd); }
+.t-spec .tier-bd { background:rgba(244,114,182,.02); }
+.t-spec .tier-badge { background:rgba(244,114,182,.12); color:var(--spec-c); border-color:var(--spec-bd); }
+.t-spec .tier-note { border-top-color:var(--spec-bd); }
+
+.t-qa { border-color:var(--qa-bd); }
+.t-qa .tier-hd { background:rgba(251,191,36,.07); color:var(--qa-c); border-bottom-color:var(--qa-bd); }
+.t-qa .tier-bd { background:rgba(251,191,36,.02); }
+.t-qa .tier-badge { background:rgba(251,191,36,.12); color:var(--qa-c); border-color:var(--qa-bd); }
+
+.t-prod { border-color:var(--prod-bd); }
+.t-prod .tier-hd { background:rgba(74,222,128,.07); color:var(--prod-c); border-bottom-color:var(--prod-bd); }
+.t-prod .tier-bd { background:rgba(74,222,128,.02); }
+.t-prod .tier-badge { background:rgba(74,222,128,.12); color:var(--prod-c); border-color:var(--prod-bd); }
+
+/* ── Env chip inside tier ───────────────────────── */
+.chip {
+  border-radius:5px; border:1px solid; padding:8px 12px;
+  display:flex; flex-direction:column; gap:2px;
+  font-size:11px; font-weight:700;
+}
+.chip-row { display:flex; align-items:center; gap:6px; }
+.chip-sub { font-size:9px; font-weight:400; opacity:.7; }
+
+.ch-fast { background:var(--fast-bg); border-color:var(--fast-bd); color:var(--fast-c); }
+.ch-test { background:var(--test-bg); border-color:var(--test-bd); color:var(--test-c); }
+.ch-spec { background:var(--spec-bg); border-color:var(--spec-bd); color:var(--spec-c); }
+.ch-qa   { background:var(--qa-bg);   border-color:var(--qa-bd);   color:var(--qa-c);   }
+.ch-prod { background:var(--prod-bg); border-color:var(--prod-bd); color:var(--prod-c); }
+
+/* ── Split row helpers ──────────────────────────── */
+.split-row { display:flex; gap:var(--sg); width:var(--cw); }
+.s-main { width:var(--t2w); flex-shrink:0; }
+.s-branch { width:var(--t2bw); flex-shrink:0; }
+
+/* ── Origin row ─────────────────────────────────── */
+.origin-row { display:flex; align-items:center; width:var(--cw); }
+.origin-dips { width:190px; flex-shrink:0; }
+.origin-hnikt { width:230px; flex-shrink:0; }
+.h-arr { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:2px; padding:0 8px; }
+.h-arr-lbl { font-size:9px; color:var(--dim); letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; }
+
+.ct-grid { display:flex; gap:4px; flex-wrap:wrap; margin-top:7px; }
+.ct {
+  font-size:9px; background:rgba(232,121,249,.08);
+  border:1px solid rgba(232,121,249,.2); border-radius:4px;
+  padding:1px 6px; color:var(--feat-c); letter-spacing:.04em;
+}
+
+/* ── Callout box ────────────────────────────────── */
+.callout {
+  flex:1; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); padding:10px 14px; font-size:10px;
+  color:var(--dim); line-height:1.7; margin-left:16px;
+}
+.callout strong { color:var(--text); }
+.callout code { color:var(--main-c); }
+
+/* ── ArgoCD ENV matrix pill row ─────────────────── */
+.env-pills { display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
+.env-pill {
+  font-size:9px; border:1px solid; border-radius:4px; padding:2px 8px;
+  font-weight:600; letter-spacing:.06em;
+}
+
+/* ── Pulse ─────────────────────────────────────── */
+@keyframes pulse-ring{0%{transform:scale(.8);opacity:1}80%,100%{transform:scale(2.2);opacity:0}}
+@keyframes pulse-dot{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.pulse {
+  display:inline-block; width:6px; height:6px; border-radius:50%;
+  background:var(--prod-c); position:relative; vertical-align:middle; margin-left:5px;
+  animation:pulse-dot 2s ease-in-out infinite;
+}
+.pulse::before {
+  content:''; position:absolute; inset:0; border-radius:50%;
+  background:var(--prod-c); animation:pulse-ring 2s ease-out infinite;
+}
+
+@keyframes fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fi{animation:fade-up .4s ease both;}
+.d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}
+.d4{animation-delay:.24s}.d5{animation-delay:.30s}.d6{animation-delay:.36s}
+.d7{animation-delay:.42s}.d8{animation-delay:.48s}.d9{animation-delay:.54s}
+
+footer { margin-top:40px; padding-top:16px; border-top:1px solid var(--border);
+  display:flex; justify-content:space-between; font-size:10px; color:var(--dim); }
+
+/* GitHub SVG path shortcut */
+.gh-icon { width:11px; height:11px; opacity:.7; flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>DIPS <em>Deploy</em> Pipeline – Foreslått modell</h1>
+    <p class="sub">Én main branch · ArgoCD ApplicationSets · Per-app staged promote</p>
+  </div>
+  <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--fast-c)"></div>Tier 1 · Fast</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--test-c)"></div>Tier 2 · Test</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--spec-c)"></div>Tier 2b · Spesialist</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--qa-c)"></div>Tier 3 · QA</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--prod-c)"></div>Tier 4 · Prod</div>
+    </div>
+    <div class="badge">Forslag</div>
+  </div>
+</header>
+
+<div class="canvas">
+<div class="canvas-inner">
+
+  <!-- ══ ORIGIN ROW ════════════════════════════════════ -->
+  <div class="origin-row fi d1">
+
+    <div class="origin-dips">
+      <div class="card c-dips" style="padding:10px 14px;">
+        <div class="clbl">Upstream</div>
+        <div class="cname">DIPS</div>
+        <div class="csub">Kildekode · referanse</div>
+      </div>
+    </div>
+
+    <div class="h-arr">
+      <div class="h-arr-lbl">leverer</div>
+      <svg width="48" height="16" viewBox="0 0 48 16">
+        <line x1="2" y1="8" x2="40" y2="8" stroke="var(--dips-c)" stroke-width="1.5"/>
+        <polyline points="34,3 40,8 34,13" fill="none" stroke="var(--dips-c)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="origin-hnikt">
+      <div class="card c-feat" style="padding:10px 14px;">
+        <div class="clbl">HNIKT tar inn endring</div>
+        <div class="cname">feature / hotfix</div>
+        <div class="ct-grid">
+          <span class="ct">Ny tjeneste</span>
+          <span class="ct">Ny versjon</span>
+          <span class="ct">Bugfix</span>
+          <span class="ct">Config</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Nøkkelendring fra nåsituasjonen</strong><br>
+      Én <code>main</code> branch erstatter branch-per-cluster.<br>
+      <strong>Promote</strong> = commit til main med oppdatert image-tag eller chart-versjon
+      i <code>environments/[env]/values.yaml</code> – ikke branch-merge.
+    </div>
+
+  </div><!-- /origin-row -->
+
+  <!-- commit to main ↓ -->
+  <!-- Centered under the HNIKT card: dips(190) + arr(~64) + hnikt/2(115) = ~369px from left -->
+  <!-- We'll use a narrow vc aligned left, then full-width main card below -->
+  <div style="width:calc(190px + 64px + 230px);align-self:flex-start;" class="fi d1">
+    <div class="vc vc-feat"><div class="vc-lbl">commit to main</div></div>
+  </div>
+
+  <!-- ══ MAIN BRANCH ════════════════════════════════════ -->
+  <div class="card c-main fi d2" style="width:var(--cw);">
+    <div class="clbl">
+      <svg class="gh-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+      GitHub · Én branch for alle miljøer
+    </div>
+    <div class="cname">main</div>
+    <div class="csub">ArgoCD leser én branch og deployer til alle K8s-miljøer via environment-matrise · promote er en eksplisitt handling per miljø</div>
+  </div>
+
+  <div class="vc vc-main fi d2" style="width:var(--cw);"><div class="vc-lbl">push trigger</div></div>
+
+  <!-- ══ ArgoCD ApplicationSets ═════════════════════════ -->
+  <div class="card c-argo fi d3" style="width:var(--cw);">
+    <div class="clbl">
+      <img src="argocd.png" width="13" height="13" style="object-fit:contain;vertical-align:middle;">
+      ArgoCD ApplicationSets · environment-matrise
+    </div>
+    <div class="cname">ArgoCD</div>
+    <div class="csub">Overvåker main branch · deployer til alle registrerte K8s-miljøer automatisk når values.yaml endres</div>
+    <div class="env-pills" style="margin-top:8px;">
+      <span class="env-pill" style="background:rgba(34,211,238,.08);color:var(--fast-c);border-color:var(--fast-bd);">Test SYN2</span>
+      <span class="env-pill" style="background:rgba(167,139,250,.08);color:var(--test-c);border-color:var(--test-bd);">Test · SYN · FRESK · Kurs</span>
+      <span class="env-pill" style="background:rgba(244,114,182,.08);color:var(--spec-c);border-color:var(--spec-bd);">Kurve Test · LsUA</span>
+      <span class="env-pill" style="background:rgba(251,191,36,.08);color:var(--qa-c);border-color:var(--qa-bd);">QA</span>
+      <span class="env-pill" style="background:rgba(74,222,128,.08);color:var(--prod-c);border-color:var(--prod-bd);">Prod</span>
+    </div>
+  </div>
+
+  <div class="vc vc-argo fi d3" style="width:var(--cw);"><div class="vc-lbl">auto deploy</div></div>
+
+  <!-- ══ TIER 1 ══════════════════════════════════════════ -->
+  <div class="tier t-fast fi d4" style="width:var(--cw);">
+    <div class="tier-hd">
+      <div>
+        <div class="tier-hd-name">Tier 1 · Fast</div>
+        <div class="tier-hd-desc">Høy endringstakt · lav stabilitetskrav · rask feedback</div>
+      </div>
+      <div class="tier-badge">auto · kontinuerlig</div>
+    </div>
+    <div class="tier-bd">
+      <div class="chip ch-fast">
+        <div class="chip-row">
+          <img src="Kubernetes_logo_without_workmark.svg.png" width="12" height="12" style="object-fit:contain;">
+          DIPS UTV
+        </div>
+        <div class="chip-sub">Automatisk promote ved merge til main · smoke-test gate til Tier 2</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SPLIT CONNECTOR (Tier 1 → T2 + T2b) ══════════ -->
+  <!--
+    T2 center:  540/2 = 270px from left
+    T2b center: 540 + 20 + 340/2 = 730px from left
+    SVG 900px wide, 64px tall
+    Trunk from T1: vertical line at x=270, y=0→24
+    Main track (T2): vertical line at x=270, y=24→64, arrow at bottom
+    Branch (T2b): line from (270,24) → (730,64), arrow at end
+  -->
+  <svg class="fi d5" width="900" height="64" viewBox="0 0 900 64" style="overflow:visible;flex-shrink:0;">
+    <!-- trunk (from Tier 1) -->
+    <line x1="270" y1="0" x2="270" y2="22" stroke="var(--fast-c)" stroke-width="2"/>
+    <!-- fork dot -->
+    <circle cx="270" cy="22" r="3" fill="var(--fast-c)"/>
+    <!-- main track down to T2 -->
+    <line x1="270" y1="22" x2="270" y2="58" stroke="var(--test-c)" stroke-width="2"/>
+    <polyline points="264,52 270,58 276,52" fill="none" stroke="var(--test-c)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- branch to T2b -->
+    <line x1="270" y1="22" x2="730" y2="58" stroke="var(--spec-c)" stroke-width="2" stroke-dasharray="6,3"/>
+    <polyline points="722,54 730,58 724,50" fill="none" stroke="var(--spec-c)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- labels -->
+    <text x="20" y="48" font-size="9" fill="var(--test-c)" font-family="JetBrains Mono, monospace" letter-spacing="1">AUTO PROMOTE · SMOKE OK</text>
+    <text x="500" y="36" font-size="9" fill="var(--spec-c)" font-family="JetBrains Mono, monospace" letter-spacing="1">MULIGHET FOR EGEN FLYT</text>
+  </svg>
+
+  <!-- ══ SPLIT TIER ROW (T2 + T2b) ═════════════════════ -->
+  <div class="split-row fi d5">
+
+    <!-- Tier 2 -->
+    <div class="tier t-test s-main">
+      <div class="tier-hd">
+        <div>
+          <div class="tier-hd-name">Tier 2 · Test</div>
+          <div class="tier-hd-desc">Semi-auto · daglig rytme</div>
+        </div>
+        <div class="tier-badge">semi-auto</div>
+      </div>
+      <div class="tier-bd">
+        <div class="chip ch-test">
+          <div class="chip-row"><img src="Kubernetes_logo_without_workmark.svg.png" width="12" height="12" style="object-fit:contain;">DIPS Test</div>
+        </div>
+        <div class="chip ch-test">
+          <div class="chip-row"><img src="Kubernetes_logo_without_workmark.svg.png" width="12" height="12" style="object-fit:contain;">DIPS Test SYN</div>
+          </div>
+        <div class="chip ch-test">
+          <div class="chip-row"><img src="Kubernetes_logo_without_workmark.svg.png" width="12" height="12" style="object-fit:contain;">DIPS FRESK</div>
+          </div>
+        <div class="chip ch-test">
+          <div class="chip-row"><img src="Kubernetes_logo_without_workmark.svg.png" width="12" height="12" style="object-fit:contain;">DIPS Kurs</div>
+        </div>
+      </div>
+      <div class="tier-note">Promote etter godkjent smoke-test i Tier 1</div>
+    </div>
+
+    <!-- Tier 2b -->
+    <div class="tier t-spec s-branch">
+      <div class="tier-hd">
+        <div>
+          <div class="tier-hd-name">Tier 2b · Spesialisert</div>
+          <div class="tier-hd-desc">Uavhengig syklus</div>
+        </div>
+        <div class="tier-badge">SEMI-AUTO</div>
+      </div>
+      <div class="tier-bd">
+        <div class="chip ch-spec">
+          <div class="chip-row"><img src="Kubernetes_logo_without_workmark.svg.png" width="12" height="12" style="object-fit:contain;">DIPS Kurve Test</div>
+          </div>
+        <div class="chip ch-spec">
+          <div class="chip-row"><img src="Kubernetes_logo_without_workmark.svg.png" width="12" height="12" style="object-fit:contain;">DIPS Test LsUA</div>
+          <div class="chip-sub">Arena-versjoner</div>
+        </div>
+		<div class="chip ch-spec">
+          <div class="chip-row"><img src="Kubernetes_logo_without_workmark.svg.png" width="12" height="12" style="object-fit:contain;">DIPS Test SYN2</div>
+          <div class="chip-sub">Sandkassemiljø</div>
+        </div>
+      </div>
+      <div class="tier-note" style="color:var(--spec-c);opacity:.7;">Uavhengig track · ikke gate til Tier 3/Prod</div>
+    </div>
+
+  </div><!-- /split-row -->
+
+  <!-- ══ T2 → T3 CONNECTOR ══════════════════════════════ -->
+  <!--
+    Only the T2 (left) side continues to QA.
+    T2 center at 270px, Tier 3 center at 450px.
+    We draw a line that converges back to center.
+  -->
+  <svg class="fi d6" width="900" height="52" viewBox="0 0 900 52" style="overflow:visible;flex-shrink:0;">
+    <!-- from T2 center (270) converging to canvas center (450) for Tier 3 -->
+    <line x1="270" y1="0" x2="270" y2="20" stroke="var(--test-c)" stroke-width="2"/>
+    <line x1="270" y1="20" x2="450" y2="48" stroke="var(--qa-c)" stroke-width="2"/>
+    <polyline points="444,42 450,48 456,42" fill="none" stroke="var(--qa-c)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- T2b side: dim line indicating no continuation -->
+    <line x1="730" y1="0" x2="730" y2="14" stroke="var(--spec-c)" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.3"/>
+    <!-- label -->
+    <text x="300" y="36" font-size="9" fill="var(--qa-c)" font-family="JetBrains Mono, monospace" letter-spacing="1">MANUELL GODKJENNING</text>
+  </svg>
+
+  <!-- ══ TIER 3 ══════════════════════════════════════════ -->
+  <div class="tier t-qa fi d6" style="width:var(--cw);">
+    <div class="tier-hd">
+      <div>
+        <div class="tier-hd-name">Tier 3 · QA</div>
+        <div class="tier-hd-desc">Manuell · godkjenningstest før produksjon</div>
+      </div>
+      <div class="tier-badge">manuell godkjenning</div>
+    </div>
+    <div class="tier-bd">
+      <div class="chip ch-qa">
+        <div class="chip-row"><img src="Kubernetes_logo_without_workmark.svg.png" width="12" height="12" style="object-fit:contain;">epj-qa-ds2</div>
+        <div class="chip-sub">Godkjenning kreves · manuell promote-beslutning</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vc vc-prod fi d7" style="width:var(--cw);"><div class="vc-lbl">manuell + godkjenningsvindu</div></div>
+
+  <!-- ══ TIER 4 ══════════════════════════════════════════ -->
+  <div class="tier t-prod fi d7" style="width:var(--cw);">
+    <div class="tier-hd">
+      <div>
+        <div class="tier-hd-name">Tier 4 · Produksjon</div>
+        <div class="tier-hd-desc">Manuell godkjenning · planlagt utrullingsvindu</div>
+      </div>
+      <div class="tier-badge">manuell · godkjenning</div>
+    </div>
+    <div class="tier-bd">
+      <div class="chip ch-prod">
+        <div class="chip-row">
+          <img src="Kubernetes_logo_without_workmark.svg.png" width="12" height="12" style="object-fit:contain;">
+          epj-prod<span class="pulse" style="margin-left:6px;"></span>
+        </div>
+        <div class="chip-sub">Produksjonsmiljø · eksplisitt godkjenning fra ansvarlig</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BOTTOM INFO ROW ════════════════════════════════ -->
+  <div class="fi d8" style="width:var(--cw);margin-top:28px;display:flex;gap:14px;">
+
+    <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;">
+      <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;">Gevinster</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:11px;">
+        <div style="display:flex;gap:7px;"><span style="color:var(--prod-c);flex-shrink:0;">✓</span><span>Applikasjoner promoteres uavhengig – én feil stopper ikke alt</span></div>
+        <div style="display:flex;gap:7px;"><span style="color:var(--prod-c);flex-shrink:0;">✓</span><span>Færre PR-er (image-tag bump vs branch-merge per env)</span></div>
+        <div style="display:flex;gap:7px;"><span style="color:var(--prod-c);flex-shrink:0;">✓</span><span>"Uavhengige" miljøer er ikke i den lineære blokkerende kjeden</span></div>
+        <div style="display:flex;gap:7px;"><span style="color:var(--prod-c);flex-shrink:0;">✓</span><span>Tier 1 gir rask feedback automatisk</span></div>
+      </div>
+    </div>
+
+    <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;">
+      <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;">Hva kreves</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:11px;">
+        <div style="display:flex;gap:7px;"><span style="color:var(--fast-c);flex-shrink:0;">→</span><span>Migrasjon fra branch-per-cluster til én main branch</span></div>
+        <div style="display:flex;gap:7px;"><span style="color:var(--fast-c);flex-shrink:0;">→</span><span>Helm values-filer per miljø (erstatter branch-differanser)</span></div>
+        <div style="display:flex;gap:7px;"><span style="color:var(--fast-c);flex-shrink:0;">→</span><span>ArgoCD ApplicationSet med environment-matrise</span></div>
+        <div style="display:flex;gap:7px;"><span style="color:var(--fast-c);flex-shrink:0;">→</span><span>CI/CD promote-script (image-tag bump til values.yaml)</span></div>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /canvas-inner -->
+</div><!-- /canvas -->
+
+<footer></footer>
+</body>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIPS Deploy Pipeline</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #21303f;
+
+  --feat-c:  #e879f9; --feat-bg: #1a0525; --feat-bd: #7e22ce;
+  --git-c:   #60a5fa; --git-bg:  #0c1a2e; --git-bd:  #1d4ed8;
+  --argo-c:  #fb923c; --argo-bg: #1c0e00; --argo-bd: #c2410c;
+  --k8s-c:   #a78bfa; --k8s-bg:  #12082a; --k8s-bd:  #6d28d9;
+  --prod-c:  #4ade80; --prod-bg: #042010; --prod-bd: #15803d;
+  --dips-c:  #94a3b8; --dips-bg: #161f2e; --dips-bd: #334155;
+
+  --text: #e2e8f0; --dim: #64748b; --faint: #1e2d3d;
+  --mono: 'JetBrains Mono', monospace;
+  --head: 'Syne', sans-serif;
+  --r: 8px;
+
+  /* Column widths – single source of truth */
+  --w1: 200px;   /* epj-utv-ds2  */
+  --w2: 480px;   /* epj-test     */
+  --w3: 200px;   /* epj-qa-ds2   */
+  --w4: 200px;   /* epj-prod     */
+  --wh: 64px;    /* h-connector  */
+
+  /* Heights of origin section elements */
+  --oh-dips:   70px;  /* DIPS card     */
+  --oh-arr1:   36px;  /* leverer arrow */
+  --oh-feat:   94px;  /* feature card  */
+  --oh-arr2:   40px;  /* merge PR arrow*/
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  padding: 36px 32px 56px;
+  min-height: 100vh;
+}
+
+/* ── Header ─────────────────────────────────────── */
+header {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 18px; margin-bottom: 36px;
+  flex-wrap: wrap; gap: 16px;
+}
+h1 { font-family: var(--head); font-size: 24px; font-weight: 800; letter-spacing: -.5px; }
+h1 em { color: var(--git-c); font-style: normal; }
+.sub { font-size: 10px; color: var(--dim); letter-spacing: .12em; text-transform: uppercase; margin-top: 5px; }
+.legend { display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+.leg { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--dim); letter-spacing:.05em; text-transform:uppercase; }
+.leg-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+
+/* ── Scrollable canvas ───────────────────────────── */
+.canvas { overflow-x: auto; padding-bottom: 16px; }
+.canvas-inner { min-width: max-content; display: flex; flex-direction: column; align-items: flex-start; }
+
+/* ── Card base ───────────────────────────────────── */
+.card {
+  border-radius: var(--r); border: 1px solid;
+  padding: 12px 15px; position: relative; overflow: hidden;
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px; border-radius: var(--r) var(--r) 0 0;
+}
+.card-step { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 5px; }
+.card-name { font-size: 13px; font-weight: 700; line-height: 1.3; }
+.card-sub  { font-size: 10px; margin-top: 3px; }
+
+.card-git  { background:var(--git-bg);  border-color:var(--git-bd);  }
+.card-git::before  { background:var(--git-c);  }
+.card-git .card-step  { color:var(--git-c);  }
+.card-git .card-name  { color:var(--git-c);  }
+.card-git .card-sub   { color:var(--dim);    }
+
+.card-prod { background:var(--prod-bg); border-color:var(--prod-bd); }
+.card-prod::before { background:var(--prod-c); }
+.card-prod .card-step { color:var(--prod-c); }
+.card-prod .card-name { color:var(--prod-c); }
+.card-prod .card-sub  { color:var(--dim);    }
+
+.card-argo { background:var(--argo-bg); border-color:var(--argo-bd); }
+.card-argo::before { background:var(--argo-c); }
+.card-argo .card-step { color:var(--argo-c); }
+.card-argo .card-name { font-size:11px; color:var(--argo-c); }
+
+.card-k8s  { background:var(--k8s-bg);  border-color:var(--k8s-bd);  }
+.card-k8s::before  { background:var(--k8s-c);  }
+.card-k8s .card-step  { color:var(--k8s-c);  }
+.card-k8s .card-name  { font-size:11px; color:var(--k8s-c); }
+
+.card-k8s-prod { background:var(--prod-bg); border-color:var(--prod-bd); }
+.card-k8s-prod::before { background:var(--prod-c); }
+.card-k8s-prod .card-step { color:var(--prod-c); }
+.card-k8s-prod .card-name { font-size:11px; color:var(--prod-c); }
+
+/* ── ArgoCD path pills ───────────────────────────── */
+.argo-paths { display:flex; gap:5px; flex-wrap:wrap; margin-top:5px; }
+.argo-path {
+  font-size:9px; background:rgba(251,146,60,.08);
+  border:1px solid rgba(251,146,60,.2); border-radius:3px;
+  padding:1px 6px; color:var(--argo-c);
+}
+
+/* ── Vertical connector ──────────────────────────── */
+.v-conn {
+  display:flex; flex-direction:column; align-items:center;
+  width:100%; height:40px; position:relative; justify-content:center;
+}
+.v-conn::before {
+  content:''; position:absolute; top:0; bottom:0;
+  left:50%; transform:translateX(-50%); width:2px;
+}
+.v-conn-lbl {
+  font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+  z-index:1; background:var(--bg); padding:0 8px;
+  border-radius:10px; white-space:nowrap;
+}
+.vc-feat::before  { background:var(--feat-c); }
+.vc-feat .v-conn-lbl  { color:var(--feat-c);  }
+.vc-git::before   { background:var(--git-c);  }
+.vc-git .v-conn-lbl   { color:var(--git-c);   }
+.vc-argo::before  { background:var(--argo-c); }
+.vc-argo .v-conn-lbl  { color:var(--argo-c);  }
+.vc-prod::before  { background:var(--prod-c); }
+.vc-prod .v-conn-lbl  { color:var(--prod-c);  }
+
+/* ── Horizontal stage connector ──────────────────── */
+.h-conn {
+  width: var(--wh); flex-shrink:0;
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:flex-start;
+  /* align to vertical mid of branch card (~50px tall → mid ≈ 25px, minus label+arrow ~14px) */
+  padding-top: 18px;
+  gap: 2px;
+}
+.h-conn-lbl { font-size:9px; color:var(--dim); letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; }
+.h-conn-arrow { width:100%; }
+.h-conn-arrow svg { width:100%; display:block; }
+
+/* ── Stage column ────────────────────────────────── */
+.stage-col {
+  display:flex; flex-direction:column; align-items:center;
+}
+
+/* ── Fan-out grid ────────────────────────────────── */
+.fanout-wrap {
+  border:1px solid var(--k8s-bd); border-radius:var(--r);
+  background:rgba(109,40,217,.07); padding:10px; width:100%;
+}
+.fanout-head {
+  font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--k8s-c); margin-bottom:8px;
+  display:flex; align-items:center; gap:6px;
+}
+.fanout-badge {
+  background:var(--k8s-bd); color:#fff;
+  border-radius:10px; padding:1px 7px;
+  font-size:9px; font-weight:700;
+}
+.fanout-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; }
+.fanout-env {
+  border-radius:5px; border:1px solid var(--k8s-bd);
+  background:var(--k8s-bg); padding:7px 8px;
+  font-size:10px; font-weight:600; color:var(--k8s-c);
+  text-align:center; white-space:nowrap;
+}
+
+/* ── Origin cards ────────────────────────────────── */
+.oc {
+  border-radius:var(--r); border:1px solid;
+  padding:12px 14px; position:relative; overflow:hidden;
+}
+.oc::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+}
+.oc-lbl { font-size:9px; letter-spacing:.14em; text-transform:uppercase; margin-bottom:5px; }
+.oc-name { font-size:12px; font-weight:700; }
+.oc-sub  { font-size:10px; margin-top:3px; }
+
+.oc-dips { background:var(--dips-bg); border-color:var(--dips-bd); border-style:dashed; }
+.oc-dips::before { background:var(--dips-c); }
+.oc-dips .oc-lbl  { color:var(--dips-c); }
+.oc-dips .oc-name { color:var(--dips-c); }
+.oc-dips .oc-sub  { color:var(--dim);    }
+
+.oc-feat { background:var(--feat-bg); border-color:var(--feat-bd); }
+.oc-feat::before { background:var(--feat-c); }
+.oc-feat .oc-lbl  { color:var(--feat-c); }
+.oc-feat .oc-name { color:var(--feat-c); }
+
+.ct-grid { display:flex; gap:5px; flex-wrap:wrap; margin-top:7px; }
+.ct {
+  font-size:9px; background:rgba(232,121,249,.08);
+  border:1px solid rgba(232,121,249,.2); border-radius:4px;
+  padding:2px 7px; color:var(--feat-c); letter-spacing:.04em;
+}
+
+/* ── Info note ───────────────────────────────────── */
+.info-note {
+  border:1px solid var(--border); border-radius:var(--r);
+  background:var(--surface); padding:12px 16px;
+  font-size:11px; line-height:1.7; color:var(--text);
+}
+.info-note-title {
+  font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--dim); margin-bottom:6px;
+}
+
+/* ── Pulse dot ───────────────────────────────────── */
+@keyframes pulse-ring{0%{transform:scale(.8);opacity:1}80%,100%{transform:scale(2.2);opacity:0}}
+@keyframes pulse-dot{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.pulse {
+  display:inline-block; width:6px; height:6px; border-radius:50%;
+  background:var(--prod-c); position:relative; vertical-align:middle; margin-left:5px;
+  animation:pulse-dot 2s ease-in-out infinite;
+}
+.pulse::before {
+  content:''; position:absolute; inset:0; border-radius:50%;
+  background:var(--prod-c); animation:pulse-ring 2s ease-out infinite;
+}
+
+/* ── Fade in ─────────────────────────────────────── */
+@keyframes fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fi{animation:fade-up .4s ease both;}
+.d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}
+.d4{animation-delay:.24s}.d5{animation-delay:.30s}.d6{animation-delay:.36s}
+
+footer {
+  margin-top:40px; padding-top:16px; border-top:1px solid var(--border);
+  display:flex; justify-content:space-between; font-size:10px; color:var(--dim);
+}
+</style>
+</head>
+<body>
+
+
+<header>
+  <div>
+    <h1>DIPS <em>Deploy</em> Pipeline</h1>
+    <p class="sub">Nåsituasjon · ArgoCD GitOps · DIPS SMUD-plattformen</p>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--feat-c)"></div>Feature/hotfix</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--git-c)"></div>Git branch</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--argo-c)"></div>ArgoCD</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--k8s-c)"></div>K8s cluster</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--prod-c)"></div>Produksjon</div>
+  </div>
+</header>
+
+<div class="canvas">
+<div class="canvas-inner">
+
+  <!--
+    ═══════════════════════════════════════════════════════
+    ORIGIN ROW + INFO NOTE
+    Sits above the pipeline. Width matches stage columns so
+    the merge-PR arrow lands exactly on epj-utv-ds2.
+    ═══════════════════════════════════════════════════════
+  -->
+  <div class="fi" style="display:flex; align-items:flex-start; gap:20px; margin-bottom:0;">
+
+    <!-- Origin block: same width as stage 1 (--w1) so arrow aligns -->
+    <div style="width:var(--w1); flex-shrink:0; display:flex; flex-direction:column; align-items:stretch;">
+
+      <!-- DIPS card -->
+      <div class="oc oc-dips" style="height:var(--oh-dips); display:flex; flex-direction:column; justify-content:center;">
+        <div class="oc-lbl">Upstream</div>
+        <div class="oc-name">DIPS</div>
+        <div class="oc-sub">Kildekode · ingen lokale endringer</div>
+      </div>
+
+      <!-- leverer ↓ -->
+      <div class="v-conn" style="height:var(--oh-arr1);">
+        <div style="position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:2px;background:var(--dips-bd);border-radius:1px;"></div>
+        <div class="v-conn-lbl" style="color:var(--dips-c);">leverer</div>
+      </div>
+
+      <!-- feature/hotfix card -->
+      <div class="oc oc-feat" style="height:var(--oh-feat); display:flex; flex-direction:column; justify-content:center;">
+        <div class="oc-lbl">HNIKT tar inn endring</div>
+        <div class="oc-name">feature / hotfix branch</div>
+        <div class="ct-grid">
+          <span class="ct">Ny tjeneste</span>
+          <span class="ct">Ny versjon</span>
+          <span class="ct">Bugfix</span>
+          <span class="ct">Config</span>
+        </div>
+      </div>
+
+      <!-- merge PR ↓  →  epj-utv-ds2 -->
+      <div class="v-conn vc-feat" style="height:var(--oh-arr2);">
+        <div class="v-conn-lbl">merge PR</div>
+      </div>
+
+    </div><!-- /origin block -->
+
+    <!-- Info note: no flow connection, floats to the right -->
+    <div class="info-note" style="margin-top:calc(var(--oh-dips) + var(--oh-arr1)); max-width:320px;">
+      <div class="info-note-title">ℹ Lineær endringsflyt</div>
+      Alle endringer testes i <span style="color:var(--git-c);font-weight:600;">hvert</span> miljø i rekkefølge før produksjon. Ingen snarveier fra utv til prod.
+    </div>
+
+  </div><!-- /origin row -->
+
+
+  <!--
+    ═══════════════════════════════════════════════════════
+    PIPELINE
+    Each stage-col has:   branch → (push trigger) → ArgoCD → (deploy) → K8s
+    h-conn arrows between stages have padding-top matching the
+    origin block height so they align with the branch card row.
+    ═══════════════════════════════════════════════════════
+  -->
+  <div style="display:flex; align-items:flex-start;">
+
+    <!-- ══ STAGE 1: epj-utv-ds2 ══════════════════════ -->
+    <div class="stage-col fi d1" style="width:var(--w1);">
+
+      <div class="card card-git" style="width:var(--w1);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="opacity:.7;flex-shrink:0;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          Steg 1 · Git branch
+        </div>
+        <div class="card-name">epj-utv-ds2</div>
+        <div class="card-sub">Utvikling · main trunk</div>
+      </div>
+
+      <div class="v-conn vc-git"><div class="v-conn-lbl">push trigger</div></div>
+
+      <div class="card card-argo" style="width:var(--w1);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;"><img src="argocd.png" width="13" height="13" style="flex-shrink:0;vertical-align:middle;object-fit:contain;">ArgoCD · sync</div>
+        <div class="card-name">ArgoCD</div>
+      </div>
+
+      <div class="v-conn vc-argo"><div class="v-conn-lbl">deploy</div></div>
+
+      <div class="card card-k8s" style="width:var(--w1);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;"><img src="Kubernetes_logo_without_workmark.svg.png" width="13" height="13" style="flex-shrink:0;vertical-align:middle;object-fit:contain;">Kubernetes cluster</div>
+        <div class="card-name">epj-utv-ds2</div>
+      </div>
+
+    </div><!-- /stage 1 -->
+
+    <!-- → PR/merge -->
+    <div class="h-conn fi d2">
+      <div class="h-conn-lbl">PR / merge</div>
+      <div class="h-conn-arrow">
+        <svg viewBox="0 0 64 18" height="18">
+          <line x1="2" y1="9" x2="56" y2="9" stroke="var(--git-c)" stroke-width="2"/>
+          <polyline points="50,3 56,9 50,15" fill="none" stroke="var(--git-c)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ══ STAGE 2: epj-test ══════════════════════════ -->
+    <div class="stage-col fi d2" style="width:var(--w2);">
+
+      <div class="card card-git" style="width:var(--w2);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="opacity:.7;flex-shrink:0;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          Steg 2 · Git branch
+        </div>
+        <div class="card-name">epj-test</div>
+        <div class="card-sub">Test · synker til 7 separate K8s-miljøer</div>
+      </div>
+
+      <div class="v-conn vc-git"><div class="v-conn-lbl">push trigger</div></div>
+
+      <div class="card card-argo" style="width:var(--w2);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;"><img src="argocd.png" width="13" height="13" style="flex-shrink:0;vertical-align:middle;object-fit:contain;">ArgoCD · sync (fan-out)</div>
+        <div class="card-name">ArgoCD</div>
+      </div>
+
+      <div class="v-conn vc-argo"><div class="v-conn-lbl">deploy til 7 clustere</div></div>
+
+      <div class="fanout-wrap" style="width:var(--w2);">
+        <div class="fanout-head"><svg width="11" height="11" style="opacity:.85;flex-shrink:0;margin-right:4px;"><use href="#icon-k8s"/></svg>Kubernetes clustere <span class="fanout-badge">7 miljøer</span></div>
+        <div class="fanout-grid">
+          <div class="fanout-env">DIPS Test</div>
+          <div class="fanout-env">DIPS Test SYN2</div>
+          <div class="fanout-env">DIPS Kurve Test</div>
+          <div class="fanout-env">DIPS FRESK</div>
+          <div class="fanout-env">DIPS Kurs</div>
+          <div class="fanout-env">DIPS Test SYN</div>
+          <div class="fanout-env" style="grid-column:2;">DIPS Test LsUA</div>
+        </div>
+      </div>
+
+    </div><!-- /stage 2 -->
+
+    <!-- → PR/merge -->
+    <div class="h-conn fi d3">
+      <div class="h-conn-lbl">PR / merge</div>
+      <div class="h-conn-arrow">
+        <svg viewBox="0 0 64 18" height="18">
+          <line x1="2" y1="9" x2="56" y2="9" stroke="var(--git-c)" stroke-width="2"/>
+          <polyline points="50,3 56,9 50,15" fill="none" stroke="var(--git-c)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ══ STAGE 3: epj-qa-ds2 ════════════════════════ -->
+    <div class="stage-col fi d4" style="width:var(--w3);">
+
+      <div class="card card-git" style="width:var(--w3);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="opacity:.7;flex-shrink:0;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          Steg 3 · Git branch
+        </div>
+        <div class="card-name">epj-qa-ds2</div>
+        <div class="card-sub">Kvalitetssikring</div>
+      </div>
+
+      <div class="v-conn vc-git"><div class="v-conn-lbl">push trigger</div></div>
+
+      <div class="card card-argo" style="width:var(--w3);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;"><img src="argocd.png" width="13" height="13" style="flex-shrink:0;vertical-align:middle;object-fit:contain;">ArgoCD · sync</div>
+        <div class="card-name">ArgoCD</div>
+      </div>
+
+      <div class="v-conn vc-argo"><div class="v-conn-lbl">deploy</div></div>
+
+      <div class="card card-k8s" style="width:var(--w3);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;"><img src="Kubernetes_logo_without_workmark.svg.png" width="13" height="13" style="flex-shrink:0;vertical-align:middle;object-fit:contain;">Kubernetes cluster</div>
+        <div class="card-name">epj-qa-ds2</div>
+      </div>
+
+    </div><!-- /stage 3 -->
+
+    <!-- → PR/merge -->
+    <div class="h-conn fi d5">
+      <div class="h-conn-lbl">PR / merge</div>
+      <div class="h-conn-arrow">
+        <svg viewBox="0 0 64 18" height="18">
+          <line x1="2" y1="9" x2="56" y2="9" stroke="var(--git-c)" stroke-width="2"/>
+          <polyline points="50,3 56,9 50,15" fill="none" stroke="var(--git-c)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ══ STAGE 4: epj-prod ══════════════════════════ -->
+    <div class="stage-col fi d6" style="width:var(--w4);">
+
+      <div class="card card-prod" style="width:var(--w4);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="opacity:.7;flex-shrink:0;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          Steg 4 · Git branch
+        </div>
+        <div class="card-name">epj-prod<span class="pulse"></span></div>
+        <div class="card-sub">Produksjon</div>
+      </div>
+
+      <div class="v-conn vc-prod"><div class="v-conn-lbl">push trigger</div></div>
+
+      <div class="card card-argo" style="width:var(--w4);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;"><img src="argocd.png" width="13" height="13" style="flex-shrink:0;vertical-align:middle;object-fit:contain;">ArgoCD · sync</div>
+        <div class="card-name">ArgoCD</div>
+      </div>
+
+      <div class="v-conn vc-argo"><div class="v-conn-lbl">deploy</div></div>
+
+      <div class="card card-k8s-prod" style="width:var(--w4);">
+        <div class="card-step" style="display:flex;align-items:center;gap:5px;"><img src="Kubernetes_logo_without_workmark.svg.png" width="13" height="13" style="flex-shrink:0;vertical-align:middle;object-fit:contain;">Kubernetes cluster</div>
+        <div class="card-name">epj-prod<span class="pulse"></span></div>
+      </div>
+
+    </div><!-- /stage 4 -->
+
+  </div><!-- /pipeline -->
+
+</div><!-- /canvas-inner -->
+</div><!-- /canvas -->
+
+<footer></footer>
+</body>
+</html>

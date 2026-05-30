@@ -1,39 +1,133 @@
+
 <!DOCTYPE html>
 <html lang="no">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DIPS Deploy – Visualiseringer</title>
+<title>DIPS Deploy Pipeline – Dokumentasjon</title>
 <style>
-  body {
-    font-family: system-ui, sans-serif;
-    background: #0f1117;
-    color: #e2e8f0;
-    max-width: 600px;
-    margin: 80px auto;
-    padding: 0 24px;
-  }
-  h1 { font-size: 1.5rem; margin-bottom: 8px; }
-  p { color: #94a3b8; margin-bottom: 32px; }
-  a {
-    display: block;
-    padding: 16px 20px;
-    margin-bottom: 12px;
-    background: #1e2330;
-    border: 1px solid #2d3748;
-    border-radius: 8px;
-    color: #60a5fa;
-    text-decoration: none;
-    font-size: 0.95rem;
-  }
-  a:hover { border-color: #60a5fa; background: #1a2035; }
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #21303f;
+  --text:    #e2e8f0;
+  --dim:     #64748b;
+  --mono:    'JetBrains Mono', monospace;
+  --head:    'Syne', sans-serif;
+  --r:       8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px;
+}
+
+h1 {
+  font-family: var(--head);
+  font-size: 2rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  color: #f1f5f9;
+}
+
+.subtitle {
+  color: var(--dim);
+  font-size: 0.85rem;
+  margin-bottom: 56px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 960px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px 24px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card:hover {
+  border-color: #60a5fa;
+  background: #0c1a2e;
+}
+
+.card-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+}
+
+.card-title {
+  font-family: var(--head);
+  font-size: 1.1rem;
+  color: #f1f5f9;
+}
+
+.card-desc {
+  font-size: 0.78rem;
+  color: var(--dim);
+  line-height: 1.6;
+}
+
+.card-arrow {
+  margin-top: auto;
+  padding-top: 16px;
+  font-size: 0.75rem;
+  color: #60a5fa;
+}
 </style>
 </head>
 <body>
-  <h1>DIPS Deploy – Visualiseringer</h1>
-  <p>Pipeline-diagrammer og arbeidsflyt for DIPS deploy.</p>
-  <a href="deploy-diagram.html">Deploy-diagram</a>
-  <a href="forslag-diagram.html">Forslag-diagram</a>
-  <a href="workflow-forslag.html">Mulig arbeidsflyt</a>
+
+<h1>DIPS Deploy Pipeline</h1>
+<p class="subtitle">Dokumentasjon og visualiseringer for deploymentmodell</p>
+
+<div class="grid">
+
+  <a class="card" href="deploy-diagram.html">
+    <span class="card-label">Nåsituasjon</span>
+    <span class="card-title">Deploy Pipeline – As-Is</span>
+    <span class="card-desc">Nåværende branch-per-cluster-modell med lineær flyt gjennom utv → test → qa → prod.</span>
+    <span class="card-arrow">Åpne diagram →</span>
+  </a>
+
+  <a class="card" href="forslag-diagram.html">
+    <span class="card-label">Foreslått modell</span>
+    <span class="card-title">Deploy Pipeline – To-Be</span>
+    <span class="card-desc">Foreslått én-branch-modell med ApplicationSets, tier-basert promotering og per-app kontroll.</span>
+    <span class="card-arrow">Åpne diagram →</span>
+  </a>
+
+  <a class="card" href="workflow-forslag.html">
+    <span class="card-label">Arbeidsflyt</span>
+    <span class="card-title">Foreslått arbeidsflyt</span>
+    <span class="card-desc">Detaljert promoteringsflyt, tier-struktur, app-versjonmatrise og problemanalyse.</span>
+    <span class="card-arrow">Åpne diagram →</span>
+  </a>
+
+</div>
+
 </body>
 </html>

@@ -13,19 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: .
+      - name: Push to gh-pages
+        run: git push origin HEAD:gh-pages --force
 
   deploy-hnikt:
+    if: github.repository == 'stephansoreng/dipsdeploy'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          personal_token: ${{ secrets.HNIKT_PAT }}
-          external_repository: HNIKT/PERSONLIG-StephanKristiansen-Sandbox
-          publish_branch: gh-pages
-          publish_dir: .
+      - name: Push to HNIKT gh-pages
+        run: |
+          git remote add hnikt https://x-access-token:${{ secrets.HNIKT_PAT }}@github.com/HNIKT/PERSONLIG-StephanKristiansen-Sandbox.git
+          git push hnikt HEAD:gh-pages --force

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<title>DIPS Deploy – ny versjonsflyt</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --bg:      #f8fafc;
+  --surface: #ffffff;
+  --surface2:#f1f5f9;
+  --border:  #e2e8f0;
+  --border2: #cbd5e1;
+  --text:    #0f172a;
+  --dim:     #64748b;
+  --faint:   #94a3b8;
+
+  --main-c:#2563eb; --main-bg:#eff6ff; --main-bd:#93c5fd;
+  --test-c:#7c3aed; --test-bg:#f3e8ff; --test-bd:#c4b5fd;
+  --qa-c:  #d97706; --qa-bg:  #fffbeb; --qa-bd:  #fcd34d;
+  --prod-c:#16a34a; --prod-bg:#f0fdf4; --prod-bd:#86efac;
+  --fast-c:#0ea5e9; --fast-bg:#e0f2fe; --fast-bd:#38bdf8;
+
+  --appa-c:#1e293b;
+  --appb-c:#7c3aed;
+  --appc-c:#0d9488;
+  --appd-c:#e11d48;
+
+  --arena-c:#e11d48; --arena-bg:#fff1f2; --arena-bd:#fda4af;
+
+  --mono: 'JetBrains Mono', monospace;
+  --head: 'Syne', sans-serif;
+  --r: 10px;
+}
+
+*,*::before,*::after{box-sizing:border-box;}
+body { font-family:var(--mono); background:var(--bg); color:var(--text); padding:28px 32px 48px; }
+
+/* ── Header ─────────────────────────────────────── */
+header { display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;
+  border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:20px; }
+h1 { font-family:var(--head); font-size:22px; font-weight:800; letter-spacing:-.4px; }
+h1 em { color:var(--appb-c); font-style:normal; }
+.sub { font-size:10px; color:var(--dim); letter-spacing:.12em; text-transform:uppercase; margin-top:5px; }
+
+.legend { display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
+.leg { display:flex; align-items:center; gap:7px; font-size:10px; color:var(--dim); letter-spacing:.05em; text-transform:uppercase; }
+.leg-line { width:16px; height:3px; border-radius:2px; flex-shrink:0; }
+
+/* ── Canvas ─────────────────────────────────────── */
+.canvas { position:relative; height:600px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;}
+
+.flow-arrow { position:absolute; inset:0; width:100%; height:100%; z-index:1; pointer-events:none; }
+
+/* ── Node cards ─────────────────────────────────── */
+.node {
+  position:absolute;
+  transform:translate(-50%,-50%);
+  width:128px;
+  padding:10px 14px;
+  border-radius:var(--r);
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-top:3px solid var(--border2);
+  text-align:center;
+  z-index:2;
+  transition: box-shadow .25s ease, border-color .25s ease;
+}
+.node { padding:16px 14px; }
+.node .cname { font-family:var(--head); font-size:14px; font-weight:700; color:var(--text); display:flex; align-items:center; justify-content:center; gap:6px; }
+
+.node.n-main { border-top-color:var(--main-bd); }
+.node.n-test { border-top-color:var(--test-bd); }
+.node.n-qa   { border-top-color:var(--qa-bd);   }
+.node.n-prod { border-top-color:var(--prod-bd); }
+.node.n-syn2 { border-top-color:var(--fast-bd); }
+.node.n-arena { border-top-color:var(--arena-bd); }
+
+@keyframes pulse-ring{0%{transform:scale(.8);opacity:1}80%,100%{transform:scale(2.4);opacity:0}}
+@keyframes pulse-dot{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.live-dot {
+  display:inline-block; width:5px; height:5px; border-radius:50%;
+  background:var(--fast-c); position:relative; animation:pulse-dot 2s ease-in-out infinite;
+}
+.live-dot::before {
+  content:''; position:absolute; inset:0; border-radius:50%;
+  background:var(--fast-c); animation:pulse-ring 2s ease-out infinite;
+}
+
+/* ── Tokens ─────────────────────────────────────── */
+.token {
+  position:absolute;
+  transform:translate(-50%,-50%);
+  font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.02em;
+  padding:7px 13px; border-radius:999px; color:#fff; white-space:nowrap;
+  border:1px solid rgba(0,0,0,.08);
+  box-shadow:0 2px 6px -1px rgba(15,23,42,.25), 0 0 0 1px rgba(255,255,255,.35) inset;
+  transition: background 0.3s ease;
+  z-index:5;
+}
+
+.tokenA { background:var(--appa-c); }
+.tokenB { background:var(--appb-c); box-shadow:0 2px 8px -1px rgba(124,58,237,.45), 0 0 0 1px rgba(255,255,255,.35) inset; }
+.tokenC { background:var(--appc-c); box-shadow:0 2px 8px -1px rgba(13,148,136,.45), 0 0 0 1px rgba(255,255,255,.35) inset; }
+.tokenD { background:var(--appd-c); box-shadow:0 2px 8px -1px rgba(225,29,72,.45), 0 0 0 1px rgba(255,255,255,.35) inset; }
+
+.check::after { content:" ✅"; }
+
+/* ── Event / progress card ───────────────────────── */
+.event-card {
+  position:absolute; top:16px; left:16px; z-index:10; min-width:230px;
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+  padding:10px 16px; box-shadow:0 4px 12px -2px rgba(15,23,42,.08);
+}
+.event-step { display:flex; justify-content:space-between; align-items:center; font-size:8px; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
+.event-step .counter { font-weight:700; color:var(--faint); }
+.event-title { font-family:var(--head); font-size:15px; font-weight:800; color:var(--text); margin-top:3px; }
+.event-bar { height:3px; border-radius:2px; background:var(--surface2); margin-top:8px; overflow:hidden; }
+.event-bar-fill { height:100%; background:var(--appb-c); border-radius:2px; transition:width .4s ease; }
+
+/* ── Fade-up entrance ─────────────────────────────── */
+@keyframes fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fi{animation:fade-up .4s ease both;}
+.d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}
+.d4{animation-delay:.24s}.d5{animation-delay:.30s}.d6{animation-delay:.36s}.d7{animation-delay:.42s}
+</style>
+</head>
+
+<body>
+
+<header class="fi">
+  <div>
+    <h1>DIPS Deploy – <em>ny modell</em></h1>
+  </div>
+  <div class="legend">
+    <div class="leg"><span class="leg-line" style="background:var(--appa-c)"></span>AppA · Standard pipeline</div>
+    <div class="leg"><span class="leg-line" style="background:var(--appb-c)"></span>AppB · Syn2-feedback-loop</div>
+    <div class="leg"><span class="leg-line" style="background:var(--appc-c)"></span>Bugfix · Rask standard-pipeline</div>
+    <div class="leg"><span class="leg-line" style="background:var(--appd-c)"></span>Arena 26.X · Venter i Test Arena</div>
+  </div>
+</header>
+
+<div class="canvas">
+
+<svg class="flow-arrow" viewBox="0 0 100 100" preserveAspectRatio="none">
+  <defs>
+    <marker id="arrow-promote" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--border2)"/>
+    </marker>
+    <marker id="arrow-sync" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--fast-bd)"/>
+    </marker>
+    <marker id="arrow-arena" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--arena-bd)"/>
+    </marker>
+  </defs>
+
+  <line id="arr-main-utv"  stroke="var(--border2)" stroke-width="2" marker-end="url(#arrow-promote)"/>
+  <line id="arr-utv-test"  stroke="var(--border2)" stroke-width="2" marker-end="url(#arrow-promote)"/>
+  <line id="arr-test-qa"   stroke="var(--border2)" stroke-width="2" marker-end="url(#arrow-promote)"/>
+  <line id="arr-qa-prod"   stroke="var(--border2)" stroke-width="2" marker-end="url(#arrow-promote)"/>
+
+  <line id="arr-utv-syn2"  stroke="var(--fast-bd)" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow-sync)"/>
+  <line id="arr-test-syn2" stroke="var(--fast-bd)" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow-sync)"/>
+
+  <line id="arr-utv-arena"  stroke="var(--arena-bd)" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow-arena)"/>
+  <line id="arr-arena-test" stroke="var(--border2)"  stroke-width="2" marker-end="url(#arrow-promote)"/>
+</svg>
+
+<div class="node n-main fi d1" data-node="main" style="left:6%;top:45%">
+  <div class="cname">Main</div>
+</div>
+<div class="node n-main fi d2" data-node="utv" style="left:20%;top:45%">
+  <div class="cname">UTV</div>
+</div>
+<div class="node n-test fi d3" data-node="test" style="left:48%;top:45%">
+  <div class="cname">Test</div>
+</div>
+<div class="node n-qa fi d4" data-node="qa" style="left:70%;top:45%">
+  <div class="cname">QA</div>
+</div>
+<div class="node n-prod fi d5" data-node="prod" style="left:90%;top:45%">
+  <div class="cname">Prod</div>
+</div>
+<div class="node n-syn2 fi d6" data-node="syn2" style="left:40%;top:78%">
+  <div class="cname">Syn2<span class="live-dot"></span></div>
+</div>
+<div class="node n-arena fi d6" data-node="arena" style="left:65%;top:78%">
+  <div class="cname">Test Arena</div>
+</div>
+
+<div id="A" class="token tokenA">AppA</div>
+<div id="B" class="token tokenB">AppB v0.1</div>
+<div id="C" class="token tokenC">Bugfix</div>
+<div id="D" class="token tokenD">Arena 26.X</div>
+
+<div id="event" class="event-card fi d7">
+  <div class="event-step"><span>Steg</span><span class="counter" id="stepCounter">1 / 17</span></div>
+  <div class="event-title" id="eventTitle"></div>
+  <div class="event-bar"><div class="event-bar-fill" id="eventBarFill" style="width:0%"></div></div>
+</div>
+
+</div>
+
+<script>
+
+const pos = {
+  main:[6,45],
+  utv:[20,45],
+  test:[48,45],
+  qa:[70,45],
+  prod:[90,45],
+  syn2:[40,78],
+  arena:[65,78]
+};
+
+const offsetA = -9;
+const offsetB = 9;
+const offsetC = 0;
+const offsetD = 18;
+
+/* startposisjon */
+const AEl = document.getElementById("A");
+const BEl = document.getElementById("B");
+const CEl = document.getElementById("C");
+const DEl = document.getElementById("D");
+
+const tokenEls   = { a:AEl, b:BEl, c:CEl, d:DEl };
+const tokenOffset = { a:offsetA, b:offsetB, c:offsetC, d:offsetD };
+
+const tweens = {};
+["a","b","c","d"].forEach(tok => {
+  const x = pos.main[0];
+  const y = pos.main[1] + tokenOffset[tok];
+  tweens[tok] = { fromX:x, fromY:y, toX:x, toY:y, start:0, duration:0, active:false };
+  tokenEls[tok].style.left = x + "%";
+  tokenEls[tok].style.top  = y + "%";
+});
+
+const nodeEls = {};
+Object.keys(pos).forEach(key => {
+  nodeEls[key] = document.querySelector('[data-node="' + key + '"]');
+});
+
+/* ── Kontinuerlig glidende token-bevegelse (rAF-tween) ──────
+   Erstatter instant snap + CSS-transition: posisjonen interpoleres
+   manuelt hver frame slik at tokenet alltid er i jevn bevegelse
+   mellom noder i stedet for å hoppe og stå i ro. */
+function easeInOutCubic(t){
+  return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3) / 2;
+}
+
+function startTween(tok, toKey, offset, duration){
+  const tw = tweens[tok];
+  tw.fromX = tw.toX;
+  tw.fromY = tw.toY;
+  tw.toX = pos[toKey][0];
+  tw.toY = pos[toKey][1] + offset;
+  tw.start = performance.now();
+  tw.duration = duration;
+  tw.active = true;
+}
+
+function tick(now){
+  Object.keys(tweens).forEach(tok => {
+    const tw = tweens[tok];
+    if (!tw.active) return;
+    const t = Math.min((now - tw.start) / tw.duration, 1);
+    const eased = easeInOutCubic(t);
+    const x = tw.fromX + (tw.toX - tw.fromX) * eased;
+    const y = tw.fromY + (tw.toY - tw.fromY) * eased;
+    tokenEls[tok].style.left = x + "%";
+    tokenEls[tok].style.top  = y + "%";
+    if (t >= 1) tw.active = false;
+  });
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+const ringColors = { a:"30,41,59", b:"124,58,237", c:"13,148,136", d:"225,29,72" };
+const current = { a:"main", b:"main", c:"main", d:"main" };
+
+function updateActive(){
+  const byNode = {};
+  Object.keys(pos).forEach(key => byNode[key] = []);
+  Object.keys(current).forEach(tok => byNode[current[tok]].push(tok));
+
+  Object.keys(byNode).forEach(key => {
+    const toks = byNode[key];
+    if (toks.length === 0) {
+      nodeEls[key].style.boxShadow = "";
+      return;
+    }
+    nodeEls[key].style.boxShadow = toks
+      .map((tok, idx) => "0 0 0 " + (3 + idx * 3) + "px rgba(" + ringColors[tok] + ",.16)")
+      .join(", ");
+  });
+}
+updateActive();
+
+/* ── Dynamiske pil-forbindelser mellom nodene ────────
+   Beregner start/slutt fra faktiske node-posisjoner (px) i stedet for
+   gjettede %-koordinater, slik at pilene alltid treffer kort-kanten
+   uavhengig av canvasens faktiske bredde. */
+const canvasEl = document.querySelector(".canvas");
+const arrowLinks = [
+  { id:"arr-main-utv",  from:"main", to:"utv"  },
+  { id:"arr-utv-test",  from:"utv",  to:"test" },
+  { id:"arr-test-qa",   from:"test", to:"qa"   },
+  { id:"arr-qa-prod",   from:"qa",   to:"prod" },
+  { id:"arr-utv-syn2",  from:"utv",  to:"syn2" },
+  { id:"arr-test-syn2", from:"syn2", to:"test" },
+
+  { id:"arr-utv-arena",  from:"utv",   to:"arena" },
+  { id:"arr-arena-test", from:"arena", to:"test"  }
+];
+
+function edgePoint(rect, canvasRect, dx, dy){
+  const halfW = rect.width / 2;
+  const halfH = rect.height / 2;
+  const tx = dx === 0 ? Infinity : halfW / Math.abs(dx);
+  const ty = dy === 0 ? Infinity : halfH / Math.abs(dy);
+  const t = Math.min(tx, ty) + 5; // 5px luft utenfor kortkanten
+  const cx = rect.left + halfW - canvasRect.left;
+  const cy = rect.top  + halfH - canvasRect.top;
+  return { x: cx + dx * t, y: cy + dy * t };
+}
+
+function drawArrows(){
+  const canvasRect = canvasEl.getBoundingClientRect();
+  const svg = document.querySelector(".flow-arrow");
+  svg.setAttribute("viewBox", "0 0 " + canvasRect.width + " " + canvasRect.height);
+
+  arrowLinks.forEach(link => {
+    const fromRect = nodeEls[link.from].getBoundingClientRect();
+    const toRect   = nodeEls[link.to].getBoundingClientRect();
+
+    const fromCx = fromRect.left + fromRect.width / 2 - canvasRect.left;
+    const fromCy = fromRect.top  + fromRect.height / 2 - canvasRect.top;
+    const toCx   = toRect.left + toRect.width / 2 - canvasRect.left;
+    const toCy   = toRect.top  + toRect.height / 2 - canvasRect.top;
+
+    const len = Math.hypot(toCx - fromCx, toCy - fromCy);
+    const ux = (toCx - fromCx) / len;
+    const uy = (toCy - fromCy) / len;
+
+    const start = edgePoint(fromRect, canvasRect, ux, uy);
+    const end   = edgePoint(toRect, canvasRect, -ux, -uy);
+
+    const line = document.getElementById(link.id);
+    line.setAttribute("x1", start.x);
+    line.setAttribute("y1", start.y);
+    line.setAttribute("x2", end.x);
+    line.setAttribute("y2", end.y);
+  });
+}
+
+window.addEventListener("load", drawArrows);
+window.addEventListener("resize", drawArrows);
+drawArrows();
+
+/*
+  AppA: egen, enkel "standardflyt" main -> utv -> test -> qa -> prod,
+  spredt over hele syklusen, helt uavhengig av AppB sin historie.
+  AppB: itererer flere ganger via Syn2 per versjon (varierer per versjon)
+  før den til slutt blir godkjent og fortsetter til Test/QA/Prod.
+*/
+const steps = [
+
+  // v0.1 - rask SYN2-iterasjon. Etter feedback i Syn2 starter v0.2 direkte fra Main
+  // (ikke tilbake til UTV - en ny versjon kommer alltid fra Main).
+  // AppC følger samme rute som AppA, men komprimert - når Prod godt før AppA/AppB.
+  // AppD går til Test Arena helt i starten og blir liggende der til AppA/AppB har nådd Prod.
+  {e:"NEW BUILD v0.1", a:"main", b:"main", c:"main", d:"main",  v:"v0.1"},
+  {e:"PROMOTE",        a:null,   b:"utv",  c:null,   d:"utv",   v:"v0.1"},
+  {e:"SYNC til Syn2",  a:null,   b:"syn2", c:"utv",  d:"arena", v:"v0.1"},
+  {e:"FEEDBACK",       a:null,   b:"syn2", c:null,   d:null,    v:"feedback"},
+
+  // v0.2 - kort, avløst raskt av v0.3
+  {e:"NEW BUILD v0.2", a:"utv",  b:"main", c:"test", d:null,    v:"v0.2"},
+  {e:"PROMOTE",        a:null,   b:"utv",  c:null,   d:null,    v:"v0.2"},
+  {e:"SYNC til Syn2",  a:null,   b:"syn2", c:"qa",   d:null,    v:"v0.2"},
+  {e:"FEEDBACK",       a:null,   b:"syn2", c:null,   d:null,    v:"feedback"},
+
+  // v0.3 - flere auto-synker mot Syn2 mens den blir liggende der, til slutt godkjent
+  {e:"NEW BUILD v0.3", a:"test", b:"main", c:null,   d:null,    v:"v0.3"},
+  {e:"PROMOTE",        a:null,   b:"utv",  c:"prod", d:null,    v:"v0.3"},
+  {e:"SYNC til Syn2",  a:null,   b:"syn2", c:null,   d:null,    v:"v0.3"},
+  {e:"SYNC til Syn2",  a:null,   b:"syn2", c:null,   d:null,    v:"v0.3"},
+  {e:"SYNC til Syn2",  a:"qa",   b:"syn2", c:null,   d:null,    v:"v0.3"},
+  {e:"GODKJENT",       a:null,   b:"syn2", c:null,   d:null,    v:"v0.3", check:true},
+  {e:"PROMOTE",        a:null,   b:"test", c:null,   d:null,    v:"v0.3", check:true},
+  {e:"PROMOTE",        a:"prod", b:"qa",   c:null,   d:null,    v:"v0.3", check:true},
+  {e:"PROMOTE",        a:null,   b:"prod", c:null,   d:null,    v:"v0.3", check:true},
+
+  // AppA og AppB har nå begge nådd Prod - AppD slippes ut av Test Arena og fullfører reisen
+  {e:"PROMOTE",        a:null,   b:null,   c:null,   d:"test",  v:"v0.1", check:true},
+  {e:"PROMOTE",        a:null,   b:null,   c:null,   d:"qa",    v:"v0.1", check:true},
+  {e:"PROMOTE",        a:null,   b:null,   c:null,   d:"prod",  v:"v0.1", check:true}
+];
+
+let i = 0;
+const STEP_MS = 1400;
+const MOVE_MS = STEP_MS - 100; // glir ferdig like før neste steg trigges
+
+function move(tok, to, offset){
+  if (to === null || to === undefined) return;
+  startTween(tok, to, offset, MOVE_MS);
+}
+
+function step(){
+
+  const s = steps[i];
+
+  document.getElementById("eventTitle").innerText = s.e;
+  document.getElementById("stepCounter").innerText = (i + 1) + " / " + steps.length;
+  document.getElementById("eventBarFill").style.width = (((i + 1) / steps.length) * 100) + "%";
+
+  move("a", s.a, offsetA);
+  move("b", s.b, offsetB);
+  move("c", s.c, offsetC);
+  move("d", s.d, offsetD);
+
+  if (s.a) current.a = s.a;
+  if (s.b) current.b = s.b;
+  if (s.c) current.c = s.c;
+  if (s.d) current.d = s.d;
+  updateActive();
+
+  BEl.innerText = "AppB " + s.v;
+
+  BEl.classList.remove("check");
+  if(s.check) BEl.classList.add("check");
+
+  i = (i + 1) % steps.length;
+}
+
+step();
+setInterval(step, STEP_MS);
+
+</script>
+
+</body>
+</html>

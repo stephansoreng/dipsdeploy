@@ -369,9 +369,13 @@ drawArrows();
 */
 const steps = [
 
-  // Arena 26.X går ut helt alene først - main -> utv -> Test Arena -
-  // før resten av flyten (AppA/AppB/Bugfix) settes i gang.
-  {e:"NEW BUILD",          a:null,   b:null,   c:null,   d:"main",  v:"v—"},
+  // Universal reset: alle fire tokens hopper/glir samlet tilbake til Main
+  // her - dette er også loop-wrap-punktet, så resetten skjer synkront
+  // hver gang syklusen starter på nytt.
+  {e:"NEW BUILD v0.1", a:"main", b:"main", c:"main", d:"main",  v:"v0.1"},
+
+  // Arena 26.X får et forsprang - main -> utv -> Test Arena - før resten
+  // av flyten (AppA/AppB/Bugfix) faktisk beveger seg videre fra Main.
   {e:"PROMOTE",            a:null,   b:null,   c:null,   d:"utv",   v:"v—"},
   {e:"SYNC til Test Arena",a:null,   b:null,   c:null,   d:"arena", v:"v—"},
 
@@ -379,7 +383,6 @@ const steps = [
   // (ikke tilbake til UTV - en ny versjon kommer alltid fra Main).
   // AppC følger samme rute som AppA, men komprimert - når Prod godt før AppA/AppB.
   // AppD (Arena 26.X) er allerede i Test Arena og blir liggende der til AppA/AppB har nådd Prod.
-  {e:"NEW BUILD v0.1", a:"main", b:"main", c:"main", d:null,    v:"v0.1"},
   {e:"PROMOTE",        a:null,   b:"utv",  c:null,   d:null,    v:"v0.1"},
   {e:"SYNC til Syn2",  a:null,   b:"syn2", c:"utv",  d:null,    v:"v0.1"},
   {e:"FEEDBACK",       a:null,   b:"syn2", c:null,   d:null,    v:"feedback"},

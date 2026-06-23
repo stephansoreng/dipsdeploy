@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<title>DIPS Deploy – dagens modell (as-is)</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --bg:      #f8fafc;
+  --surface: #ffffff;
+  --surface2:#f1f5f9;
+  --border:  #e2e8f0;
+  --border2: #cbd5e1;
+  --text:    #0f172a;
+  --dim:     #64748b;
+  --faint:   #94a3b8;
+
+  --main-c:#2563eb; --main-bg:#eff6ff; --main-bd:#93c5fd;
+  --test-c:#7c3aed; --test-bg:#f3e8ff; --test-bd:#c4b5fd;
+  --qa-c:  #d97706; --qa-bg:  #fffbeb; --qa-bd:  #fcd34d;
+  --prod-c:#16a34a; --prod-bg:#f0fdf4; --prod-bd:#86efac;
+  --fan-c: #0d9488; --fan-bg: #f0fdfa; --fan-bd: #5eead4;
+
+  --batch-c:#1e293b;
+  --queue-c:#e11d48; --queue-bg:#fff1f2; --queue-bd:#fda4af;
+
+  --mono: 'JetBrains Mono', monospace;
+  --head: 'Syne', sans-serif;
+  --r: 10px;
+}
+
+*,*::before,*::after{box-sizing:border-box;}
+body { font-family:var(--mono); background:var(--bg); color:var(--text); padding:28px 32px 48px; }
+
+/* ── Header ─────────────────────────────────────── */
+header { display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;
+  border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:20px; }
+h1 { font-family:var(--head); font-size:22px; font-weight:800; letter-spacing:-.4px; }
+h1 em { color:var(--queue-c); font-style:normal; }
+.sub { font-size:10px; color:var(--dim); letter-spacing:.12em; text-transform:uppercase; margin-top:5px; }
+
+.legend { display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
+.leg { display:flex; align-items:center; gap:7px; font-size:10px; color:var(--dim); letter-spacing:.05em; text-transform:uppercase; }
+.leg-line { width:16px; height:3px; border-radius:2px; flex-shrink:0; }
+.leg-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+/* ── Canvas ─────────────────────────────────────── */
+.canvas { position:relative; height:600px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;}
+
+.flow-arrow { position:absolute; inset:0; width:100%; height:100%; z-index:1; pointer-events:none; }
+
+/* ── Node cards ─────────────────────────────────── */
+.node {
+  position:absolute;
+  transform:translate(-50%,-50%);
+  width:128px;
+  padding:16px 14px;
+  border-radius:var(--r);
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-top:3px solid var(--border2);
+  text-align:center;
+  z-index:2;
+  transition: box-shadow .25s ease, border-color .25s ease;
+}
+.node .cname { font-family:var(--head); font-size:14px; font-weight:700; color:var(--text); display:flex; align-items:center; justify-content:center; gap:6px; }
+
+.node.n-main { border-top-color:var(--main-bd); }
+.node.n-test { border-top-color:var(--test-bd); }
+.node.n-qa   { border-top-color:var(--qa-bd);   }
+.node.n-prod { border-top-color:var(--prod-bd); }
+
+/* ── Fan-out mini nodes (7 testmiljøer) ───────────── */
+.node-mini {
+  position:absolute;
+  transform:translate(-50%,-50%);
+  width:78px;
+  padding:7px 6px;
+  border-radius:7px;
+  background:var(--fan-bg);
+  border:1px solid var(--fan-bd);
+  text-align:center;
+  z-index:2;
+  font-size:8.5px; font-weight:700; color:var(--fan-c);
+  line-height:1.3;
+  transition: box-shadow .25s ease;
+}
+
+@keyframes pulse-ring{0%{transform:scale(.8);opacity:1}80%,100%{transform:scale(2.4);opacity:0}}
+@keyframes pulse-dot{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.live-dot {
+  display:inline-block; width:5px; height:5px; border-radius:50%;
+  background:var(--queue-c); position:relative; animation:pulse-dot 2s ease-in-out infinite;
+}
+.live-dot::before {
+  content:''; position:absolute; inset:0; border-radius:50%;
+  background:var(--queue-c); animation:pulse-ring 2s ease-out infinite;
+}
+
+/* ── Tokens ─────────────────────────────────────── */
+.token {
+  position:absolute;
+  transform:translate(-50%,-50%);
+  font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.02em;
+  padding:7px 13px; border-radius:999px; color:#fff; white-space:nowrap;
+  border:1px solid rgba(0,0,0,.08);
+  box-shadow:0 2px 6px -1px rgba(15,23,42,.25), 0 0 0 1px rgba(255,255,255,.35) inset;
+  transition: background 0.3s ease, opacity .3s ease;
+  z-index:5;
+}
+.token.hidden { opacity:0; pointer-events:none; }
+
+.token-batch { background:var(--batch-c); }
+.token-fan   { background:var(--fan-c); font-size:9px; padding:4px 9px; opacity:0; box-shadow:0 2px 6px -1px rgba(13,148,136,.45), 0 0 0 1px rgba(255,255,255,.35) inset; }
+.token-fan.partial { background:var(--faint); box-shadow:0 1px 4px -1px rgba(15,23,42,.25), 0 0 0 1px rgba(255,255,255,.3) inset; }
+.token-fan.show { opacity:1; }
+.token-fan.partial.show { opacity:.55; }
+
+.check::after { content:" ✅"; }
+
+/* ── Queue badge ved Main ─────────────────────────── */
+.queue-badge {
+  position:absolute; transform:translate(-50%,0);
+  z-index:4; background:var(--queue-bg); border:1px solid var(--queue-bd);
+  border-radius:12px; padding:7px 10px 8px; width:138px;
+  font-weight:700; white-space:nowrap;
+}
+.queue-badge-head { display:flex; align-items:center; gap:6px; font-size:9.5px; color:var(--queue-c); margin-bottom:5px; }
+.queue-dots { display:flex; flex-wrap:wrap; gap:3px; }
+.queue-dot {
+  width:6px; height:6px; border-radius:50%; background:var(--queue-c);
+  flex-shrink:0; animation:fade-up .25s ease both;
+}
+
+/* ── Event / progress card ───────────────────────── */
+.event-card {
+  position:absolute; top:16px; left:16px; z-index:10; min-width:260px;
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+  padding:10px 16px; box-shadow:0 4px 12px -2px rgba(15,23,42,.08);
+}
+.event-step { display:flex; justify-content:space-between; align-items:center; font-size:8px; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
+.event-step .counter { font-weight:700; color:var(--faint); }
+.event-title { font-family:var(--head); font-size:15px; font-weight:800; color:var(--text); margin-top:3px; }
+.event-bar { height:3px; border-radius:2px; background:var(--surface2); margin-top:8px; overflow:hidden; }
+.event-bar-fill { height:100%; background:var(--queue-c); border-radius:2px; transition:width .4s ease; }
+
+/* ── Delivered badge ───────────────────────────────── */
+.delivered-badge {
+  position:absolute; top:16px; right:16px; z-index:10;
+  background:var(--prod-bg); border:1px solid var(--prod-bd); border-radius:999px;
+  padding:6px 14px; font-size:10px; color:var(--prod-c); font-weight:700;
+}
+
+/* ── Fade-up entrance ─────────────────────────────── */
+@keyframes fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fi{animation:fade-up .4s ease both;}
+.d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}
+.d4{animation-delay:.24s}.d5{animation-delay:.30s}.d6{animation-delay:.36s}.d7{animation-delay:.42s}
+</style>
+</head>
+
+<body>
+
+<header class="fi">
+  <div>
+    <h1>DIPS Deploy – <em>dagens modell</em></h1>
+    <p class="sub">As-is · branch per cluster · lineær promotering i puljer</p>
+  </div>
+  <div class="legend">
+    <div class="leg"><span class="leg-line" style="background:var(--border2)"></span>Promotering</div>
+    <div class="leg"><span class="leg-line" style="background:var(--fan-bd)"></span>Fan-out · alle 7 testmiljø</div>
+    <div class="leg"><span class="leg-dot" style="background:var(--batch-c)"></span>Batch i pipeline</div>
+    <div class="leg"><span class="leg-dot" style="background:var(--queue-c)"></span>Kø som venter i Main</div>
+  </div>
+</header>
+
+<div class="canvas">
+
+<svg class="flow-arrow" viewBox="0 0 100 100" preserveAspectRatio="none">
+  <defs>
+    <marker id="arrow-promote" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--border2)"/>
+    </marker>
+    <marker id="arrow-fan" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--fan-bd)"/>
+    </marker>
+  </defs>
+
+  <line id="arr-main-utv"  stroke="var(--border2)" stroke-width="2" marker-end="url(#arrow-promote)"/>
+  <line id="arr-utv-test"  stroke="var(--border2)" stroke-width="2" marker-end="url(#arrow-promote)"/>
+  <line id="arr-test-qa"   stroke="var(--border2)" stroke-width="2" marker-end="url(#arrow-promote)"/>
+  <line id="arr-qa-prod"   stroke="var(--border2)" stroke-width="2" marker-end="url(#arrow-promote)"/>
+
+  <line id="arr-test-env0" stroke="var(--fan-bd)" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-fan)"/>
+  <line id="arr-test-env1" stroke="var(--fan-bd)" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-fan)"/>
+  <line id="arr-test-env2" stroke="var(--fan-bd)" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-fan)"/>
+  <line id="arr-test-env3" stroke="var(--fan-bd)" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-fan)"/>
+  <line id="arr-test-env4" stroke="var(--fan-bd)" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-fan)"/>
+  <line id="arr-test-env5" stroke="var(--fan-bd)" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-fan)"/>
+  <line id="arr-test-env6" stroke="var(--fan-bd)" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-fan)"/>
+</svg>
+
+<div class="node n-main fi d1" data-node="main" style="left:6%;top:45%">
+  <div class="cname">Main</div>
+</div>
+<div class="node n-main fi d2" data-node="utv" style="left:20%;top:45%">
+  <div class="cname">UTV</div>
+</div>
+<div class="node n-test fi d3" data-node="test" style="left:44%;top:45%">
+  <div class="cname">Test</div>
+</div>
+<div class="node n-qa fi d4" data-node="qa" style="left:70%;top:45%">
+  <div class="cname">QA</div>
+</div>
+<div class="node n-prod fi d5" data-node="prod" style="left:90%;top:45%">
+  <div class="cname">Prod</div>
+</div>
+
+<div class="node-mini fi d6" data-node="env0" style="left:29%;top:76%">DIPS Test</div>
+<div class="node-mini fi d6" data-node="env1" style="left:38%;top:76%">DIPS Test SYN2</div>
+<div class="node-mini fi d6" data-node="env2" style="left:47%;top:76%">DIPS Kurve Test</div>
+<div class="node-mini fi d6" data-node="env3" style="left:56%;top:76%">DIPS FRESK</div>
+<div class="node-mini fi d6" data-node="env4" style="left:34%;top:90%">DIPS Kurs</div>
+<div class="node-mini fi d6" data-node="env5" style="left:44%;top:90%">DIPS Test SYN</div>
+<div class="node-mini fi d6" data-node="env6" style="left:54%;top:90%">DIPS Test LsUA</div>
+
+<div class="queue-badge fi d1" id="queueBadge" style="left:6%;top:14%">
+  <div class="queue-badge-head"><span class="live-dot"></span><span id="queueCount">0 venter i kø</span></div>
+  <div class="queue-dots" id="queueDots"></div>
+</div>
+
+<div id="batch" class="token token-batch">Batch #1</div>
+<div id="fan0" class="token token-fan primary">✓</div>
+<div id="fan1" class="token token-fan partial">↻</div>
+<div id="fan2" class="token token-fan partial">↻</div>
+<div id="fan3" class="token token-fan partial">↻</div>
+<div id="fan4" class="token token-fan partial">↻</div>
+<div id="fan5" class="token token-fan partial">↻</div>
+<div id="fan6" class="token token-fan partial">↻</div>
+
+<div id="event" class="event-card fi d7">
+  <div class="event-step"><span>Steg</span><span class="counter" id="stepCounter">1 / 8</span></div>
+  <div class="event-title" id="eventTitle"></div>
+  <div class="event-bar"><div class="event-bar-fill" id="eventBarFill" style="width:0%"></div></div>
+</div>
+
+<div class="delivered-badge fi d7" id="deliveredBadge">0 puljer levert</div>
+
+</div>
+
+<script>
+
+const pos = {
+  main:[6,45],
+  utv:[20,45],
+  test:[44,45],
+  qa:[70,45],
+  prod:[90,45],
+  env0:[29,76], env1:[38,76], env2:[47,76], env3:[56,76],
+  env4:[34,90], env5:[44,90], env6:[54,90]
+};
+const envKeys = ["env0","env1","env2","env3","env4","env5","env6"];
+
+const batchEl = document.getElementById("batch");
+const fanEls  = envKeys.map((k, i) => document.getElementById("fan" + i));
+
+const tween = { fromX:pos.main[0], fromY:pos.main[1], toX:pos.main[0], toY:pos.main[1], start:0, duration:0, active:false };
+batchEl.style.left = pos.main[0] + "%";
+batchEl.style.top  = pos.main[1] + "%";
+
+envKeys.forEach((k, i) => {
+  fanEls[i].style.left = pos[k][0] + "%";
+  fanEls[i].style.top  = (pos[k][1] - 7) + "%";
+});
+
+const nodeEls = {};
+Object.keys(pos).forEach(key => {
+  nodeEls[key] = document.querySelector('[data-node="' + key + '"]');
+});
+
+/* ── Kontinuerlig glidende batch-bevegelse (rAF-tween) ── */
+function easeInOutCubic(t){
+  return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3) / 2;
+}
+
+function startTween(toKey, duration){
+  tween.fromX = tween.toX;
+  tween.fromY = tween.toY;
+  tween.toX = pos[toKey][0];
+  tween.toY = pos[toKey][1];
+  tween.start = performance.now();
+  tween.duration = duration;
+  tween.active = true;
+}
+
+function tick(now){
+  if (tween.active) {
+    const t = Math.min((now - tween.start) / tween.duration, 1);
+    const eased = easeInOutCubic(t);
+    batchEl.style.left = (tween.fromX + (tween.toX - tween.fromX) * eased) + "%";
+    batchEl.style.top  = (tween.fromY + (tween.toY - tween.fromY) * eased) + "%";
+    if (t >= 1) tween.active = false;
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+let currentNode = "main";
+function updateActive(){
+  ["main","utv","test","qa","prod"].forEach(key => {
+    nodeEls[key].style.boxShadow = (key === currentNode)
+      ? "0 0 0 4px rgba(30,41,59,.16)"
+      : "";
+  });
+}
+updateActive();
+
+function setFanoutActive(on){
+  envKeys.forEach((key, idx) => {
+    if (!on) { nodeEls[key].style.boxShadow = ""; return; }
+    nodeEls[key].style.boxShadow = idx === 0
+      ? "0 0 0 4px rgba(13,148,136,.28)"
+      : "0 0 0 2px rgba(100,116,139,.14)";
+  });
+}
+
+/* ── Dynamiske pil-forbindelser mellom nodene ──────── */
+const canvasEl = document.querySelector(".canvas");
+const arrowLinks = [
+  { id:"arr-main-utv", from:"main", to:"utv"  },
+  { id:"arr-utv-test", from:"utv",  to:"test" },
+  { id:"arr-test-qa",  from:"test", to:"qa"   },
+  { id:"arr-qa-prod",  from:"qa",   to:"prod" },
+  { id:"arr-test-env0", from:"test", to:"env0" },
+  { id:"arr-test-env1", from:"test", to:"env1" },
+  { id:"arr-test-env2", from:"test", to:"env2" },
+  { id:"arr-test-env3", from:"test", to:"env3" },
+  { id:"arr-test-env4", from:"test", to:"env4" },
+  { id:"arr-test-env5", from:"test", to:"env5" },
+  { id:"arr-test-env6", from:"test", to:"env6" }
+];
+
+function edgePoint(rect, canvasRect, dx, dy){
+  const halfW = rect.width / 2;
+  const halfH = rect.height / 2;
+  const tx = dx === 0 ? Infinity : halfW / Math.abs(dx);
+  const ty = dy === 0 ? Infinity : halfH / Math.abs(dy);
+  const t = Math.min(tx, ty) + 5;
+  const cx = rect.left + halfW - canvasRect.left;
+  const cy = rect.top  + halfH - canvasRect.top;
+  return { x: cx + dx * t, y: cy + dy * t };
+}
+
+function drawArrows(){
+  const canvasRect = canvasEl.getBoundingClientRect();
+  const svg = document.querySelector(".flow-arrow");
+  svg.setAttribute("viewBox", "0 0 " + canvasRect.width + " " + canvasRect.height);
+
+  arrowLinks.forEach(link => {
+    const fromRect = nodeEls[link.from].getBoundingClientRect();
+    const toRect   = nodeEls[link.to].getBoundingClientRect();
+
+    const fromCx = fromRect.left + fromRect.width / 2 - canvasRect.left;
+    const fromCy = fromRect.top  + fromRect.height / 2 - canvasRect.top;
+    const toCx   = toRect.left + toRect.width / 2 - canvasRect.left;
+    const toCy   = toRect.top  + toRect.height / 2 - canvasRect.top;
+
+    const len = Math.hypot(toCx - fromCx, toCy - fromCy);
+    const ux = (toCx - fromCx) / len;
+    const uy = (toCy - fromCy) / len;
+
+    const start = edgePoint(fromRect, canvasRect, ux, uy);
+    const end   = edgePoint(toRect, canvasRect, -ux, -uy);
+
+    const line = document.getElementById(link.id);
+    line.setAttribute("x1", start.x);
+    line.setAttribute("y1", start.y);
+    line.setAttribute("x2", end.x);
+    line.setAttribute("y2", end.y);
+  });
+}
+
+window.addEventListener("load", drawArrows);
+window.addEventListener("resize", drawArrows);
+drawArrows();
+
+/* ── Kø som bygger seg opp i Main mens batchen er i transit ── */
+const queueCountEl = document.getElementById("queueCount");
+const queueDotsEl  = document.getElementById("queueDots");
+let queueCount = 0;
+function addQueueItem(){
+  queueCount++;
+  queueCountEl.textContent = queueCount + " venter i kø";
+  const dot = document.createElement("span");
+  dot.className = "queue-dot";
+  queueDotsEl.appendChild(dot);
+}
+function removeQueueItems(n){
+  for (let k = 0; k < n; k++) {
+    if (queueDotsEl.firstChild) queueDotsEl.removeChild(queueDotsEl.firstChild);
+  }
+  queueCount = Math.max(0, queueCount - n);
+  queueCountEl.textContent = queueCount + " venter i kø";
+}
+setInterval(addQueueItem, 900);
+for (let n = 0; n < 6; n++) setTimeout(addQueueItem, n * 200);
+
+/*
+  Hele batchen reiser som ÉN enhet gjennom Main -> UTV -> Test -> QA -> Prod.
+  Pipelinen har fast kapasitet (BATCH_SIZE pr runde), men nye endringer
+  ankommer raskere enn det - derfor vokser kø-tallet i Main gradvis fra
+  runde til runde i stedet for å nulles ut. Dette illustrerer at vi i dag
+  ikke klarer å ta unna det som samler seg opp.
+*/
+const BATCH_SIZE = 10;
+const steps = [
+  { e:() => "Batch #" + batchNo + " (" + batchSize + " endringer) klar i Main", to:"main", dispatch:true },
+  { e:() => "PROMOTE → UTV",   to:"utv"  },
+  { e:() => "PROMOTE → Test",  to:"test" },
+  { e:() => "SYNC til alle 7 testmiljø samtidig", fanout:"show" },
+  { e:() => "Validerer i DIPS Test — øvrige synker, men testes kun delvis", fanout:"hold" },
+  { e:() => "GODKJENT → PROMOTE → QA", fanout:"hide", to:"qa" },
+  { e:() => "PROMOTE → Prod", to:"prod", deliver:true },
+  { e:() => "Batch #" + batchNo + " i produksjon ✅ — pipeline ledig", hold:true }
+];
+
+let i = 0;
+let batchNo = 1;
+let batchSize = 10;
+let delivered = 0;
+const STEP_MS = 1600;
+const MOVE_MS = STEP_MS - 150;
+
+function step(){
+  const s = steps[i];
+
+  if (s.dispatch) {
+    batchSize = BATCH_SIZE;
+    removeQueueItems(Math.min(BATCH_SIZE, queueCount));
+    batchEl.textContent = "Batch #" + batchNo + " · " + batchSize + " apper";
+    batchEl.classList.remove("hidden");
+  }
+
+  document.getElementById("eventTitle").innerText = s.e();
+  document.getElementById("stepCounter").innerText = (i + 1) + " / " + steps.length;
+  document.getElementById("eventBarFill").style.width = (((i + 1) / steps.length) * 100) + "%";
+
+  if (s.fanout === "show") {
+    batchEl.classList.add("hidden");
+    fanEls.forEach((el, idx) => setTimeout(() => el.classList.add("show"), idx * 90));
+    setFanoutActive(true);
+  } else if (s.fanout === "hide") {
+    fanEls.forEach(el => el.classList.remove("show"));
+    setFanoutActive(false);
+    batchEl.classList.remove("hidden");
+  }
+
+  if (s.to) {
+    currentNode = s.to;
+    updateActive();
+    startTween(s.to, MOVE_MS);
+  }
+
+  if (s.deliver) {
+    delivered++;
+    document.getElementById("deliveredBadge").innerText = delivered + " puljer levert";
+  }
+  if (s.hold) {
+    batchNo++;
+  }
+
+  i = (i + 1) % steps.length;
+}
+
+step();
+setInterval(step, STEP_MS);
+
+</script>
+
+</body>
+</html>

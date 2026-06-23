@@ -23,7 +23,6 @@
   --prod-c:#16a34a; --prod-bg:#f0fdf4; --prod-bd:#86efac;
   --fast-c:#0ea5e9; --fast-bg:#e0f2fe; --fast-bd:#38bdf8;
 
-  --appa-c:#1e293b;
   --appb-c:#7c3aed;
   --appc-c:#0d9488;
   --appd-c:#e11d48;
@@ -48,6 +47,7 @@ h1 em { color:var(--appb-c); font-style:normal; }
 .legend { display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
 .leg { display:flex; align-items:center; gap:7px; font-size:10px; color:var(--dim); letter-spacing:.05em; text-transform:uppercase; }
 .leg-line { width:16px; height:3px; border-radius:2px; flex-shrink:0; }
+.leg-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 
 /* ── Canvas ─────────────────────────────────────── */
 .canvas { position:relative; height:600px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;}
@@ -97,16 +97,34 @@ h1 em { color:var(--appb-c); font-style:normal; }
   padding:7px 13px; border-radius:999px; color:#fff; white-space:nowrap;
   border:1px solid rgba(0,0,0,.08);
   box-shadow:0 2px 6px -1px rgba(15,23,42,.25), 0 0 0 1px rgba(255,255,255,.35) inset;
-  transition: background 0.3s ease;
+  transition: background 0.3s ease, opacity .25s ease;
   z-index:5;
 }
 
-.tokenA { background:var(--appa-c); }
 .tokenB { background:var(--appb-c); box-shadow:0 2px 8px -1px rgba(124,58,237,.45), 0 0 0 1px rgba(255,255,255,.35) inset; }
-.tokenC { background:var(--appc-c); box-shadow:0 2px 8px -1px rgba(13,148,136,.45), 0 0 0 1px rgba(255,255,255,.35) inset; }
 .tokenD { background:var(--appd-c); box-shadow:0 2px 8px -1px rgba(225,29,72,.45), 0 0 0 1px rgba(255,255,255,.35) inset; }
 
 .check::after { content:" ✅"; }
+
+/* ── Bakgrunnstrafikk: generiske apper i fritt løp ── */
+.token-bg {
+  background:#94a3b8; font-size:9px; padding:4px 9px; opacity:0;
+  box-shadow:0 1px 4px -1px rgba(15,23,42,.2), 0 0 0 1px rgba(255,255,255,.3) inset;
+}
+.token-bg.bugfix { background:var(--appc-c); }
+
+/* ── Kø-indikator ved Main (kontrast til as-is-modellen) ── */
+.queue-badge {
+  position:absolute; transform:translate(-50%,0); z-index:4;
+  background:var(--arena-bg); border:1px solid var(--arena-bd);
+  border-radius:12px; padding:6px 9px 7px; width:120px; white-space:nowrap;
+}
+.queue-badge-head { display:flex; align-items:center; gap:5px; font-size:8.5px; color:var(--arena-c); font-weight:700; margin-bottom:4px; }
+.queue-dots { display:flex; flex-wrap:wrap; gap:3px; min-height:6px; }
+.queue-dot {
+  width:5px; height:5px; border-radius:50%; background:var(--arena-c);
+  flex-shrink:0; animation:fade-up .25s ease both;
+}
 
 /* ── Event / progress card ───────────────────────── */
 .event-card {
@@ -135,10 +153,11 @@ h1 em { color:var(--appb-c); font-style:normal; }
     <h1>DIPS Deploy – <em>ny modell</em></h1>
   </div>
   <div class="legend">
-    <div class="leg"><span class="leg-line" style="background:var(--appa-c)"></span>AppA · Standard pipeline</div>
     <div class="leg"><span class="leg-line" style="background:var(--appb-c)"></span>AppB · Syn2-feedback-loop</div>
-    <div class="leg"><span class="leg-line" style="background:var(--appc-c)"></span>Bugfix · Rask standard-pipeline</div>
     <div class="leg"><span class="leg-line" style="background:var(--appd-c)"></span>Arena 26.X · Venter i Test Arena</div>
+    <div class="leg"><span class="leg-dot" style="background:#94a3b8"></span>Bakgrunnstrafikk · uavhengige apper</div>
+    <div class="leg"><span class="leg-dot" style="background:var(--appc-c)"></span>Bugfix · blant bakgrunnstrafikken</div>
+    <div class="leg"><span class="leg-dot" style="background:var(--arena-c)"></span>Kø i Main · tømmes umiddelbart</div>
   </div>
 </header>
 
@@ -191,10 +210,21 @@ h1 em { color:var(--appb-c); font-style:normal; }
   <div class="cname">Test Arena</div>
 </div>
 
-<div id="A" class="token tokenA">AppA</div>
 <div id="B" class="token tokenB">AppB v0.1</div>
-<div id="C" class="token tokenC">Bugfix</div>
 <div id="D" class="token tokenD">Arena 26.X</div>
+
+<div id="bg0" class="token token-bg bugfix">Bugfix</div>
+<div id="bg1" class="token token-bg bugfix">Bugfix</div>
+<div id="bg2" class="token token-bg bugfix">Bugfix</div>
+<div id="bg3" class="token token-bg">App 1</div>
+<div id="bg4" class="token token-bg">App 2</div>
+<div id="bg5" class="token token-bg">App 3</div>
+<div id="bg6" class="token token-bg">App 4</div>
+
+<div class="queue-badge fi d1" id="queueBadge" style="left:6%;top:22%">
+  <div class="queue-badge-head"><span class="live-dot"></span><span id="queueCount">0 venter</span></div>
+  <div class="queue-dots" id="queueDots"></div>
+</div>
 
 <div id="event" class="event-card fi d7">
   <div class="event-step"><span>Steg</span><span class="counter" id="stepCounter">1 / 17</span></div>
@@ -216,28 +246,105 @@ const pos = {
   arena:[65,78]
 };
 
-const offsetA = -9;
 const offsetB = 9;
-const offsetC = 0;
 const offsetD = 18;
 
 /* startposisjon */
-const AEl = document.getElementById("A");
 const BEl = document.getElementById("B");
-const CEl = document.getElementById("C");
 const DEl = document.getElementById("D");
 
-const tokenEls   = { a:AEl, b:BEl, c:CEl, d:DEl };
-const tokenOffset = { a:offsetA, b:offsetB, c:offsetC, d:offsetD };
+const tokenEls   = { b:BEl, d:DEl };
+const tokenOffset = { b:offsetB, d:offsetD };
 
 const tweens = {};
-["a","b","c","d"].forEach(tok => {
+["b","d"].forEach(tok => {
   const x = pos.main[0];
   const y = pos.main[1] + tokenOffset[tok];
   tweens[tok] = { fromX:x, fromY:y, toX:x, toY:y, start:0, duration:0, active:false };
   tokenEls[tok].style.left = x + "%";
   tokenEls[tok].style.top  = y + "%";
 });
+
+/* ── Bakgrunnstrafikk: generiske apper (inkl. et par "Bugfix") i fritt,
+   uavhengig løp ─────────────────────────────────────────────────────
+   I motsetning til AppB/Arena 26.X (styrt av steps-arrayet) kjører disse
+   på sin egen timer, helt uavhengig av hverandre - de skal illustrere at
+   hovedpipelinen i denne modellen IKKE blokkerer andre apper, i kontrast
+   til kø-oppbyggingen i deploy-diagram-animert.html. */
+const BG_KEYS    = ["bg0","bg1","bg2","bg3","bg4","bg5","bg6"];
+const BG_OFFSETS = [-9, -11, -7, -9, -11, -7, -9]; // egen bane litt over/under hovedraden, med jitter
+const BG_HOP_MS  = 1100;
+const QUEUE_POS  = [6, 22]; // matcher posisjonen til kø-badgen ved Main
+
+BG_KEYS.forEach((key, idx) => {
+  const el = document.getElementById(key);
+  tokenEls[key] = el;
+  tokenOffset[key] = BG_OFFSETS[idx];
+  const x = QUEUE_POS[0];
+  const y = QUEUE_POS[1];
+  tweens[key] = { fromX:x, fromY:y, toX:x, toY:y, start:0, duration:0, active:false };
+  el.style.left = x + "%";
+  el.style.top  = y + "%";
+});
+
+let bgFreePool = BG_KEYS.slice();
+
+function bgRetire(key){
+  tokenEls[key].style.opacity = 0;
+  setTimeout(() => {
+    const x = QUEUE_POS[0];
+    const y = QUEUE_POS[1];
+    tweens[key].fromX = tweens[key].toX = x;
+    tweens[key].fromY = tweens[key].toY = y;
+    tokenEls[key].style.left = x + "%";
+    tokenEls[key].style.top  = y + "%";
+    bgFreePool.push(key);
+  }, 250);
+}
+
+function bgJourney(key){
+  // Standardrute: Main -> UTV -> Test -> QA -> Prod. Første hopp går synlig
+  // fra kø-posisjonen og inn i Main, slik at det er tydelig at appen
+  // kommer fra køen vi nettopp har lagt til.
+  const hops = ["main","utv","test","qa","prod"];
+  let h = 0;
+  function nextHop(){
+    if (h >= hops.length) {
+      setTimeout(() => bgRetire(key), 500);
+      return;
+    }
+    startTween(key, hops[h], tokenOffset[key], BG_HOP_MS - 150);
+    h++;
+    setTimeout(nextHop, BG_HOP_MS);
+  }
+  nextHop();
+}
+
+function bgDispatch(){
+  const key = bgFreePool.shift();
+  if (!key) return; // poolen er full i øyeblikket - hoppes over, prøves igjen neste ankomst
+  tokenEls[key].style.opacity = 1;
+  bgJourney(key);
+}
+
+const queueDotsEl  = document.getElementById("queueDots");
+const queueCountEl = document.getElementById("queueCount");
+let bgQueueCount = 0;
+function addBgQueueItem(){
+  bgQueueCount++;
+  queueCountEl.textContent = bgQueueCount + " venter";
+  const dot = document.createElement("span");
+  dot.className = "queue-dot";
+  queueDotsEl.appendChild(dot);
+  setTimeout(() => {
+    if (queueDotsEl.firstChild) queueDotsEl.removeChild(queueDotsEl.firstChild);
+    bgQueueCount = Math.max(0, bgQueueCount - 1);
+    queueCountEl.textContent = bgQueueCount + " venter";
+    bgDispatch();
+  }, 400);
+}
+setInterval(addBgQueueItem, 900);
+setTimeout(addBgQueueItem, 400);
 
 const nodeEls = {};
 Object.keys(pos).forEach(key => {
@@ -279,8 +386,8 @@ function tick(now){
 }
 requestAnimationFrame(tick);
 
-const ringColors = { a:"30,41,59", b:"124,58,237", c:"13,148,136", d:"225,29,72" };
-const current = { a:"main", b:"main", c:"main", d:"main" };
+const ringColors = { b:"124,58,237", d:"225,29,72" };
+const current = { b:"main", d:"main" };
 
 function updateActive(){
   const byNode = {};
@@ -362,60 +469,73 @@ window.addEventListener("resize", drawArrows);
 drawArrows();
 
 /*
-  AppA: egen, enkel "standardflyt" main -> utv -> test -> qa -> prod,
-  spredt over hele syklusen, helt uavhengig av AppB sin historie.
   AppB: itererer flere ganger via Syn2 per versjon (varierer per versjon)
-  før den til slutt blir godkjent og fortsetter til Test/QA/Prod.
+  før den til slutt blir godkjent og fortsetter til Test/QA/Prod. Hver
+  "NEW BUILD" markerer at en ny versjon kommer inn fra køen ved Main
+  (bFromQueue), på samme måte som bakgrunnstrafikken.
 */
 const steps = [
 
-  // Universal reset: alle fire tokens hopper/glir samlet tilbake til Main
-  // her - dette er også loop-wrap-punktet, så resetten skjer synkront
-  // hver gang syklusen starter på nytt.
-  {e:"NEW BUILD v0.1", a:"main", b:"main", c:"main", d:"main",  v:"v0.1"},
+  // Universal reset: AppB og Arena 26.X hopper/glir samlet tilbake til
+  // Main her - dette er også loop-wrap-punktet. AppB sin nye versjon
+  // kommer synlig fra køen, akkurat som bakgrunnstrafikken.
+  {e:"NEW BUILD v0.1", b:"main", bFromQueue:true, d:"main",  v:"v0.1"},
 
-  // Arena 26.X får et forsprang - main -> utv -> Test Arena - før resten
-  // av flyten (AppA/AppB/Bugfix) faktisk beveger seg videre fra Main.
-  {e:"PROMOTE",            a:null,   b:null,   c:null,   d:"utv",   v:"v—"},
-  {e:"SYNC til Test Arena",a:null,   b:null,   c:null,   d:"arena", v:"v—"},
+  // Arena 26.X får et forsprang - main -> utv -> Test Arena - før AppB
+  // faktisk beveger seg videre fra Main.
+  {e:"PROMOTE",            b:null,   d:"utv",   v:"v—"},
+  {e:"SYNC til Test Arena",b:null,   d:"arena", v:"v—"},
 
-  // v0.1 - rask SYN2-iterasjon. Etter feedback i Syn2 starter v0.2 direkte fra Main
-  // (ikke tilbake til UTV - en ny versjon kommer alltid fra Main).
-  // AppC følger samme rute som AppA, men komprimert - når Prod godt før AppA/AppB.
-  // AppD (Arena 26.X) er allerede i Test Arena og blir liggende der til AppA/AppB har nådd Prod.
-  {e:"PROMOTE",        a:null,   b:"utv",  c:null,   d:null,    v:"v0.1"},
-  {e:"SYNC til Syn2",  a:null,   b:"syn2", c:"utv",  d:null,    v:"v0.1"},
-  {e:"FEEDBACK",       a:null,   b:"syn2", c:null,   d:null,    v:"feedback"},
+  // v0.1 - rask SYN2-iterasjon. Etter feedback i Syn2 starter v0.2 direkte fra
+  // køen igjen (ikke tilbake til UTV - en ny versjon kommer alltid fra Main).
+  // Arena 26.X er allerede i Test Arena og blir liggende der til AppB har nådd Prod.
+  {e:"PROMOTE",        b:"utv",  d:null,    v:"v0.1"},
+  {e:"SYNC til Syn2",  b:"syn2", d:null,    v:"v0.1"},
+  {e:"FEEDBACK",       b:"syn2", d:null,    v:"feedback"},
 
   // v0.2 - kort, avløst raskt av v0.3
-  {e:"NEW BUILD v0.2", a:"utv",  b:"main", c:"test", d:null,    v:"v0.2"},
-  {e:"PROMOTE",        a:null,   b:"utv",  c:null,   d:null,    v:"v0.2"},
-  {e:"SYNC til Syn2",  a:null,   b:"syn2", c:"qa",   d:null,    v:"v0.2"},
-  {e:"FEEDBACK",       a:null,   b:"syn2", c:null,   d:null,    v:"feedback"},
+  {e:"NEW BUILD v0.2", b:"main", bFromQueue:true, d:null,    v:"v0.2"},
+  {e:"PROMOTE",        b:"utv",  d:null,    v:"v0.2"},
+  {e:"SYNC til Syn2",  b:"syn2", d:null,    v:"v0.2"},
+  {e:"FEEDBACK",       b:"syn2", d:null,    v:"feedback"},
 
   // v0.3 - flere auto-synker mot Syn2 mens den blir liggende der, til slutt godkjent
-  {e:"NEW BUILD v0.3", a:"test", b:"main", c:null,   d:null,    v:"v0.3"},
-  {e:"PROMOTE",        a:null,   b:"utv",  c:"prod", d:null,    v:"v0.3"},
-  {e:"SYNC til Syn2",  a:null,   b:"syn2", c:null,   d:null,    v:"v0.3"},
-  {e:"SYNC til Syn2",  a:null,   b:"syn2", c:null,   d:null,    v:"v0.3"},
-  {e:"SYNC til Syn2",  a:"qa",   b:"syn2", c:null,   d:null,    v:"v0.3"},
-  {e:"GODKJENT",       a:null,   b:"syn2", c:null,   d:null,    v:"v0.3", check:true},
-  {e:"PROMOTE",        a:null,   b:"test", c:null,   d:null,    v:"v0.3", check:true},
-  {e:"PROMOTE",        a:"prod", b:"qa",   c:null,   d:null,    v:"v0.3", check:true},
-  {e:"PROMOTE",        a:null,   b:"prod", c:null,   d:null,    v:"v0.3", check:true},
+  {e:"NEW BUILD v0.3", b:"main", bFromQueue:true, d:null,    v:"v0.3"},
+  {e:"PROMOTE",        b:"utv",  d:null,    v:"v0.3"},
+  {e:"SYNC til Syn2",  b:"syn2", d:null,    v:"v0.3"},
+  {e:"SYNC til Syn2",  b:"syn2", d:null,    v:"v0.3"},
+  {e:"SYNC til Syn2",  b:"syn2", d:null,    v:"v0.3"},
+  {e:"GODKJENT",       b:"syn2", d:null,    v:"v0.3", check:true},
+  {e:"PROMOTE",        b:"test", d:null,    v:"v0.3", check:true},
+  {e:"PROMOTE",        b:"qa",   d:null,    v:"v0.3", check:true},
+  {e:"PROMOTE",        b:"prod", d:null,    v:"v0.3", check:true},
 
-  // AppA og AppB har nå begge nådd Prod - AppD slippes ut av Test Arena og fullfører reisen
-  {e:"PROMOTE",        a:null,   b:null,   c:null,   d:"test",  v:"v0.1", check:true},
-  {e:"PROMOTE",        a:null,   b:null,   c:null,   d:"qa",    v:"v0.1", check:true},
-  {e:"PROMOTE",        a:null,   b:null,   c:null,   d:"prod",  v:"v0.1", check:true}
+  // AppB har nå nådd Prod - Arena 26.X slippes ut av Test Arena og fullfører reisen
+  {e:"PROMOTE",        b:null,   d:"test",  v:"v0.1", check:true},
+  {e:"PROMOTE",        b:null,   d:"qa",    v:"v0.1", check:true},
+  {e:"PROMOTE",        b:null,   d:"prod",  v:"v0.1", check:true}
 ];
 
 let i = 0;
 const STEP_MS = 1400;
 const MOVE_MS = STEP_MS - 100; // glir ferdig like før neste steg trigges
 
-function move(tok, to, offset){
+function move(tok, to, offset, fromQueue){
   if (to === null || to === undefined) return;
+  if (fromQueue) {
+    // Samme prinsipp som bakgrunnstrafikken: snapp synlig til kø-posisjonen
+    // først, så glir tokenet derfra og inn i Main - en ny versjon "kommer fra køen".
+    tokenEls[tok].style.opacity = 0;
+    tweens[tok].toX = QUEUE_POS[0];
+    tweens[tok].toY = QUEUE_POS[1];
+    tokenEls[tok].style.left = QUEUE_POS[0] + "%";
+    tokenEls[tok].style.top  = QUEUE_POS[1] + "%";
+    setTimeout(() => {
+      tokenEls[tok].style.opacity = 1;
+      startTween(tok, to, offset, MOVE_MS);
+    }, 90);
+    return;
+  }
   startTween(tok, to, offset, MOVE_MS);
 }
 
@@ -427,14 +547,10 @@ function step(){
   document.getElementById("stepCounter").innerText = (i + 1) + " / " + steps.length;
   document.getElementById("eventBarFill").style.width = (((i + 1) / steps.length) * 100) + "%";
 
-  move("a", s.a, offsetA);
-  move("b", s.b, offsetB);
-  move("c", s.c, offsetC);
+  move("b", s.b, offsetB, s.bFromQueue);
   move("d", s.d, offsetD);
 
-  if (s.a) current.a = s.a;
   if (s.b) current.b = s.b;
-  if (s.c) current.c = s.c;
   if (s.d) current.d = s.d;
   updateActive();
 

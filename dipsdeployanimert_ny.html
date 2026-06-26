@@ -44,13 +44,17 @@ h1 { font-family:var(--head); font-size:22px; font-weight:800; letter-spacing:-.
 h1 em { color:var(--appb-c); font-style:normal; }
 .sub { font-size:10px; color:var(--dim); letter-spacing:.12em; text-transform:uppercase; margin-top:5px; }
 
-.legend { display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
-.leg { display:flex; align-items:center; gap:7px; font-size:10px; color:var(--dim); letter-spacing:.05em; text-transform:uppercase; }
+.legend { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.leg { display:flex; align-items:center; gap:7px; font-size:10px; color:var(--dim); letter-spacing:.05em; text-transform:uppercase; flex:1 1 auto; min-width:160px; }
 .leg-line { width:16px; height:3px; border-radius:2px; flex-shrink:0; }
 .leg-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.leg-badge { width:20px; height:20px; border-radius:50%; flex-shrink:0; object-fit:cover; filter:saturate(.55) brightness(1.04); }
 
 /* ── Canvas ─────────────────────────────────────── */
-.canvas { position:relative; height:600px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;}
+.canvas { position:relative; height:600px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;
+  box-shadow:0 8px 24px -8px rgba(15,23,42,.10), 0 1px 2px rgba(15,23,42,.04);
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 22px 22px;}
 
 .flow-arrow { position:absolute; inset:0; width:100%; height:100%; z-index:1; pointer-events:none; }
 
@@ -69,6 +73,7 @@ h1 em { color:var(--appb-c); font-style:normal; }
   transition: box-shadow .25s ease, border-color .25s ease;
 }
 .node { padding:16px 14px; }
+.node:hover { box-shadow:0 6px 16px -6px rgba(15,23,42,.18); border-color:var(--faint); }
 .node .cname { font-family:var(--head); font-size:14px; font-weight:700; color:var(--text); display:flex; align-items:center; justify-content:center; gap:6px; }
 
 .node.n-main { border-top-color:var(--main-bd); }
@@ -130,13 +135,60 @@ h1 em { color:var(--appb-c); font-style:normal; }
 .event-card {
   position:absolute; top:16px; left:16px; z-index:10; min-width:230px;
   background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
-  padding:10px 16px; box-shadow:0 4px 12px -2px rgba(15,23,42,.08);
+  padding:10px 16px; box-shadow:0 6px 16px -4px rgba(15,23,42,.10), 0 1px 2px rgba(15,23,42,.04);
 }
 .event-step { display:flex; justify-content:space-between; align-items:center; font-size:8px; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
 .event-step .counter { font-weight:700; color:var(--faint); }
 .event-title { font-family:var(--head); font-size:15px; font-weight:800; color:var(--text); margin-top:3px; }
 .event-bar { height:3px; border-radius:2px; background:var(--surface2); margin-top:8px; overflow:hidden; }
 .event-bar-fill { height:100%; background:var(--appb-c); border-radius:2px; transition:width .4s ease; }
+
+/* ── Helse Nord IKT zone + provenance badges ──────── */
+.zone-hnikt {
+  position:absolute;
+  left:13%; top:30%; width:84%; height:63%;
+  border:1.5px dashed var(--border2);
+  border-radius:18px;
+  background:rgba(241,245,249,.45);
+  z-index:0;
+  pointer-events:none;
+}
+.zone-label {
+  position:absolute;
+  top:-13px; left:18px;
+  display:flex; align-items:center; gap:6px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:3px 10px 3px 6px;
+  box-shadow:0 1px 3px -1px rgba(15,23,42,.12);
+}
+.zone-label img { height:18px; width:auto; display:block; }
+.dips-chip {
+  position:absolute;
+  top:-34px; left:50%;
+  transform:translate(-50%,0);
+  z-index:4;
+  display:flex; align-items:center; justify-content:center;
+  background:#0f172a;
+  border-radius:10px;
+  padding:6px 12px;
+  box-shadow:0 2px 6px -1px rgba(15,23,42,.25);
+  white-space:nowrap;
+}
+.dips-chip img { height:13px; width:auto; display:block; }
+.auto-badge {
+  position:absolute;
+  top:-13px; right:-13px;
+  width:34px; height:34px;
+  border-radius:50%;
+  object-fit:cover;
+  display:block;
+  border:2.5px solid var(--surface);
+  box-shadow:0 2px 6px -1px rgba(15,23,42,.3);
+  z-index:3;
+  filter:saturate(.55) brightness(1.04);
+}
 
 /* ── Fade-up entrance ─────────────────────────────── */
 @keyframes fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -151,6 +203,7 @@ h1 em { color:var(--appb-c); font-style:normal; }
 <header class="fi">
   <div>
     <h1>DIPS Deploy – <em>ny modell</em></h1>
+    <p class="sub">Main som hub · Syn2-feedback-loop · Test Arena på siden · ingen kø-blokkering</p>
   </div>
   <div class="legend">
     <div class="leg"><span class="leg-line" style="background:var(--appb-c)"></span>AppB · Syn2-feedback-loop</div>
@@ -158,10 +211,17 @@ h1 em { color:var(--appb-c); font-style:normal; }
     <div class="leg"><span class="leg-dot" style="background:#94a3b8"></span>Bakgrunnstrafikk · uavhengige apper</div>
     <div class="leg"><span class="leg-dot" style="background:var(--appc-c)"></span>Bugfix · blant bakgrunnstrafikken</div>
     <div class="leg"><span class="leg-dot" style="background:var(--arena-c)"></span>Kø i Main · tømmes umiddelbart</div>
+    <div class="leg"><img class="leg-badge" src="visuals/autotest.jpg" alt="">Automatisert testing en forutsetning for å lykkes</div>
   </div>
 </header>
 
 <div class="canvas">
+
+<div class="zone-hnikt fi d1">
+  <div class="zone-label">
+    <img src="visuals/helse-nord-ikt---rgb.png" alt="Helse Nord IKT" loading="lazy">
+  </div>
+</div>
 
 <svg class="flow-arrow" viewBox="0 0 100 100" preserveAspectRatio="none">
   <defs>
@@ -196,6 +256,7 @@ h1 em { color:var(--appb-c); font-style:normal; }
 </div>
 <div class="node n-test fi d3" data-node="test" style="left:48%;top:45%">
   <div class="cname">Test</div>
+  <img class="auto-badge" src="visuals/autotest.jpg" alt="" title="Trenger mer automatisert testdekning her" loading="lazy">
 </div>
 <div class="node n-qa fi d4" data-node="qa" style="left:70%;top:45%">
   <div class="cname">QA</div>
@@ -205,9 +266,11 @@ h1 em { color:var(--appb-c); font-style:normal; }
 </div>
 <div class="node n-syn2 fi d6" data-node="syn2" style="left:40%;top:78%">
   <div class="cname">Syn2<span class="live-dot"></span></div>
+  <img class="auto-badge" src="visuals/autotest.jpg" alt="" title="Trenger mer automatisert testdekning her" loading="lazy">
 </div>
 <div class="node n-arena fi d6" data-node="arena" style="left:65%;top:78%">
   <div class="cname">Test Arena</div>
+  <img class="auto-badge" src="visuals/autotest.jpg" alt="" title="Trenger mer automatisert testdekning her" loading="lazy">
 </div>
 
 <div id="B" class="token tokenB">AppB v0.1</div>
@@ -220,8 +283,14 @@ h1 em { color:var(--appb-c); font-style:normal; }
 <div id="bg4" class="token token-bg">App 2</div>
 <div id="bg5" class="token token-bg">App 3</div>
 <div id="bg6" class="token token-bg">App 4</div>
+<div id="bg7" class="token token-bg">App 5</div>
+<div id="bg8" class="token token-bg">App 6</div>
+<div id="bg9" class="token token-bg">App 7</div>
+<div id="bg10" class="token token-bg">App 8</div>
+<div id="bg11" class="token token-bg">App 9</div>
 
 <div class="queue-badge fi d1" id="queueBadge" style="left:6%;top:22%">
+  <div class="dips-chip"><img src="visuals/Dips_white-1.webp" alt="DIPS" loading="lazy"></div>
   <div class="queue-badge-head"><span class="live-dot"></span><span id="queueCount">0 venter</span></div>
   <div class="queue-dots" id="queueDots"></div>
 </div>
@@ -271,16 +340,19 @@ const tweens = {};
    på sin egen timer, helt uavhengig av hverandre - de skal illustrere at
    hovedpipelinen i denne modellen IKKE blokkerer andre apper, i kontrast
    til kø-oppbyggingen i deploy-diagram-animert.html. */
-const BG_KEYS    = ["bg0","bg1","bg2","bg3","bg4","bg5","bg6"];
-const BG_OFFSETS = [-9, -11, -7, -9, -11, -7, -9]; // egen bane litt over/under hovedraden, med jitter
+const BG_KEYS    = ["bg0","bg1","bg2","bg3","bg4","bg5","bg6","bg7","bg8","bg9","bg10","bg11"];
+const BG_OFFSETS = [-7, -9, -11, -7, -9, -11, -7, -9, -11, -7, -9, -11]; // egen bane litt over hovedraden, klart under kø-badgen
+const BG_X_JITTER = [-3, 3, -2, 2, -4, 4, -1, -3, 3, -2, 2, -4]; // sprer banene horisontalt så samtidige tokens ikke stables i kø-hjørnet/UTV
 const BG_HOP_MS  = 1100;
-const QUEUE_POS  = [6, 22]; // matcher posisjonen til kø-badgen ved Main
+const QUEUE_POS  = [6, 34]; // rett under kø-badgen ved Main, så tokens ikke starter rett på badge-teksten
 
+const tokenXOffset = {};
 BG_KEYS.forEach((key, idx) => {
   const el = document.getElementById(key);
   tokenEls[key] = el;
   tokenOffset[key] = BG_OFFSETS[idx];
-  const x = QUEUE_POS[0];
+  tokenXOffset[key] = BG_X_JITTER[idx];
+  const x = QUEUE_POS[0] + tokenXOffset[key];
   const y = QUEUE_POS[1];
   tweens[key] = { fromX:x, fromY:y, toX:x, toY:y, start:0, duration:0, active:false };
   el.style.left = x + "%";
@@ -292,7 +364,7 @@ let bgFreePool = BG_KEYS.slice();
 function bgRetire(key){
   tokenEls[key].style.opacity = 0;
   setTimeout(() => {
-    const x = QUEUE_POS[0];
+    const x = QUEUE_POS[0] + tokenXOffset[key];
     const y = QUEUE_POS[1];
     tweens[key].fromX = tweens[key].toX = x;
     tweens[key].fromY = tweens[key].toY = y;
@@ -302,10 +374,31 @@ function bgRetire(key){
   }, 250);
 }
 
+function spawnSideTrip(toKey){
+  // Forgreining fra UTV: en "klon" av en bakgrunnsapp snappes synlig til
+  // UTVs posisjon og glir derfra rett til Syn2/Test Arena, og forsvinner
+  // der - ingen videre bevegelse, siden pipeline-flyten (test/qa/prod)
+  // allerede er illustrert av hoved-tokenet.
+  const key = bgFreePool.shift();
+  if (!key) return; // poolen er full i øyeblikket - hoppes over
+  const x = pos.utv[0] + tokenXOffset[key];
+  const y = pos.utv[1] + tokenOffset[key];
+  tweens[key].fromX = tweens[key].toX = x;
+  tweens[key].fromY = tweens[key].toY = y;
+  tokenEls[key].style.left = x + "%";
+  tokenEls[key].style.top  = y + "%";
+  tokenEls[key].style.opacity = 1;
+  startTween(key, toKey, tokenOffset[key], BG_HOP_MS - 150);
+  setTimeout(() => bgRetire(key), BG_HOP_MS + 300);
+}
+
 function bgJourney(key){
   // Standardrute: Main -> UTV -> Test -> QA -> Prod. Første hopp går synlig
   // fra kø-posisjonen og inn i Main, slik at det er tydelig at appen
   // kommer fra køen vi nettopp har lagt til.
+  // Når appen forlater UTV mot Test, forgrener den seg samtidig til Syn2 og
+  // Test Arena (spawnSideTrip), slik at disse sidenodene også får liv fra
+  // bakgrunnstrafikken - uten å endre hovedrutens videre forløp.
   const hops = ["main","utv","test","qa","prod"];
   let h = 0;
   function nextHop(){
@@ -314,6 +407,10 @@ function bgJourney(key){
       return;
     }
     startTween(key, hops[h], tokenOffset[key], BG_HOP_MS - 150);
+    if (hops[h] === "test") {
+      spawnSideTrip("syn2");
+      spawnSideTrip("arena");
+    }
     h++;
     setTimeout(nextHop, BG_HOP_MS);
   }
@@ -363,7 +460,7 @@ function startTween(tok, toKey, offset, duration){
   const tw = tweens[tok];
   tw.fromX = tw.toX;
   tw.fromY = tw.toY;
-  tw.toX = pos[toKey][0];
+  tw.toX = pos[toKey][0] + (tokenXOffset[tok] || 0);
   tw.toY = pos[toKey][1] + offset;
   tw.start = performance.now();
   tw.duration = duration;
@@ -483,8 +580,8 @@ const steps = [
 
   // Arena 26.X får et forsprang - main -> utv -> Test Arena - før AppB
   // faktisk beveger seg videre fra Main.
-  {e:"PROMOTE",            b:null,   d:"utv",   v:"v—"},
-  {e:"SYNC til Test Arena",b:null,   d:"arena", v:"v—"},
+  {e:"PROMOTE",            b:null,   d:"utv",   v:"v0.1"},
+  {e:"SYNC til Test Arena",b:null,   d:"arena", v:"v0.1"},
 
   // v0.1 - rask SYN2-iterasjon. Etter feedback i Syn2 starter v0.2 direkte fra
   // køen igjen (ikke tilbake til UTV - en ny versjon kommer alltid fra Main).
